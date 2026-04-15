@@ -13,3 +13,6 @@ wheels/
 
 # Data
 data/ModelNet40
+
+# Checkpoints
+checkpoints/checkpoint*.pt

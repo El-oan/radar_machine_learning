@@ -16,3 +16,5 @@ data/ModelNet40
 
 # Checkpoints
 checkpoints/checkpoint*.pt
+checkpoints/radHAR/checkpoint*.pt
+checkpoints/modelNET/checkpoint*.pt

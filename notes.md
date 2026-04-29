@@ -19,6 +19,11 @@ questions to prof:
 Macro F1: 0.8581 \
 Accuracy: 0.8574 \
 {'boxing': 0.8039867281913757, 'jack': 0.8625592589378357, 'jump': 0.7763713002204895, 'squats': 0.9416666626930237, 'walk': 0.9059233665466309} \
+we even get for checkpoint 69: \
+Macro F1: 0.9319 \
+Accuracy: 0.9295 \
+{'boxing': 0.9266409277915955, 'jack': 0.9743589758872986, 'jump': 0.8770492076873779, 'squats': 0.9873417615890503, 'walk': 0.8940397500991821}
+
 <img src="images/radHAR/radHARV1_3dimensions.png" alt="diagram" width="500">
 <img src="images/radHAR/radHARV1_3dimensions_scores.png" alt="diagram" width="500">
 

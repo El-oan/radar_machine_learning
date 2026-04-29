@@ -94,7 +94,10 @@ def parse_frame(data: bytes, offset: int) -> dict:
 
 
 def parse_file(path: Path) -> list[dict]:
-    data = path.read_bytes()
+    return parse_data(path.read_bytes())
+
+
+def parse_data(data: bytes) -> list[dict]:
     return [parse_frame(data, offset) for offset in find_packet_offsets(data)]
 
 

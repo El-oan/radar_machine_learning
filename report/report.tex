@@ -1,0 +1,143 @@
+\documentclass{article}
+\usepackage{arxiv}
+
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{hyperref}
+\usepackage{url}
+\usepackage{booktabs}
+\usepackage{amsfonts}
+\usepackage{nicefrac}
+\usepackage{microtype}
+\usepackage{lipsum}
+
+
+\title{Radar Posture Classification: A Comparative Study of SOTA Architectures}
+\author{Eloan Tourtelier, Othmane Ouali, Lucas Cheylan}
+\date{2026}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+We study posture classification from radar point clouds and compare several model
+architectures for distinguishing between sitting and standing positions. We describe
+our radar point representation, training protocol, and evaluation setting, and we
+benchmark multiple baselines under the same experimental conditions. Our results
+highlight which architectural choices are most effective for sparse radar point data
+and provide practical guidance for future radar-based human state recognition.
+\end{abstract}
+
+\tableofcontents
+
+\section{Introduction}
+\subsection{Problem statement}
+% Define the task: classify posture from radar point clouds.
+
+\subsection{Motivation}
+% Why radar? privacy, robustness, low-light operation, lightweight sensing.
+
+\subsection{Contributions}
+% Example:
+% - A radar point-cloud dataset/protocol for sitting vs standing.
+% - A fair comparison of several architectures.
+% - Analysis of feature importance and failure cases.
+
+\section{Related Work}
+\subsection{Radar-based human sensing}
+% Human activity recognition, posture recognition, mmWave/radar perception.
+
+\subsection{Radar point cloud classification}
+% Prior work on point clouds, engineered features, sparse radar representations.
+
+\subsection{Point cloud deep learning models}
+% PointNet, PointNet++, PointMLP, transformer-based models, etc.
+
+\section{Problem Formulation}
+\subsection{Input representation}
+% One sample = one radar frame or a short temporal window.
+% Points may contain x/y/z, Doppler, intensity, SNR, etc.
+
+\subsection{Output labels}
+% Binary classification: sitting vs standing.
+
+\subsection{Learning objective}
+% Cross-entropy / focal loss / class weighting if needed.
+
+\section{Method}
+\subsection{Radar processing pipeline}
+% Briefly explain how raw radar is converted into point clouds.
+
+\subsection{Preprocessing}
+% Centering, normalization, padding/sampling to N points, temporal aggregation.
+
+\subsection{Compared architectures}
+\subsubsection{MLP / feature-based baseline}
+% Optional classical baseline.
+
+\subsubsection{PointNet}
+% Simple point-wise baseline.
+
+\subsubsection{PointNet++ or hierarchical model}
+% Local neighborhoods and multi-scale features.
+
+\subsubsection{Transformer-based point model}
+% Attention-based architecture if relevant.
+
+\subsection{Training protocol}
+% Same optimizer, epochs, augmentations, batch size, learning rate for all models.
+
+\section{Experimental Setup}
+\subsection{Dataset}
+% Sensor setup, acquisition protocol, subjects, classes, frame count.
+
+\subsection{Train/validation/test split}
+% Subject-wise split if possible to avoid leakage.
+
+\subsection{Evaluation metrics}
+% Accuracy, precision, recall, F1, balanced accuracy.
+
+\subsection{Implementation details}
+% Hardware, software, training time, parameter counts.
+
+\section{Results}
+\subsection{Main quantitative comparison}
+% Table with all architectures.
+
+\subsection{Per-class performance}
+% For binary task, precision/recall/F1 per class.
+
+\subsection{Confusion matrix}
+% Show typical errors.
+
+\subsection{Robustness analysis}
+% Across distance, number of points, occlusion, low SNR, etc.
+
+\section{Ablation Studies}
+\subsection{Effect of input features}
+% Coordinates only vs + Doppler vs + intensity.
+
+\subsection{Effect of point count}
+% 32 / 64 / 128 / 256 points.
+
+\subsection{Effect of temporal context}
+% Single frame vs multiple frames, if you use sequences.
+
+\section{Discussion}
+\subsection{Why some models work better}
+% Relate performance to radar sparsity and feature quality.
+
+\subsection{Limitations}
+% Dataset size, class imbalance, sensor placement, generalization.
+
+\subsection{Practical implications}
+% What model is best for deployment.
+
+\section{Conclusion}
+% Restate findings and next steps.
+
+\bibliographystyle{plain}
+\bibliography{references}
+
+\end{document}

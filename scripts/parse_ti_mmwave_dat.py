@@ -39,7 +39,7 @@ def find_packet_offsets(data: bytes) -> list[int]:
 
 def parse_points(payload: bytes) -> list[dict]:
     points = []
-    for offset in range(0, len(payload), 16):
+    for offset in range(0, len(payload) - (len(payload) % 16), 16):
         x, y, z, velocity = struct.unpack_from("<4f", payload, offset)
         points.append(
             {
@@ -54,7 +54,7 @@ def parse_points(payload: bytes) -> list[dict]:
 
 def parse_side_info(payload: bytes) -> list[dict]:
     entries = []
-    for offset in range(0, len(payload), 4):
+    for offset in range(0, len(payload) - (len(payload) % 4), 4):
         snr, noise = struct.unpack_from("<2h", payload, offset)
         entries.append({"snr": snr, "noise": noise})
     return entries
@@ -71,16 +71,23 @@ def merge_point_features(points: list[dict], side_info: list[dict]) -> list[dict
 
 
 def parse_frame(data: bytes, offset: int) -> dict:
-    _, _, _, _, frame_number, _, _, num_tlvs, _ = struct.unpack_from(
+    _, _, total_packet_len, _, frame_number, _, _, num_tlvs, _ = struct.unpack_from(
         "<8s8I", data, offset
     )
+    packet_end = offset + total_packet_len
     cursor = offset + 40
     points = []
     side_info = []
     for _ in range(num_tlvs):
+        if cursor + 8 > packet_end:
+            break
         tlv_type, tlv_length = struct.unpack_from("<II", data, cursor)
         payload_start = cursor + 8
         payload_end = payload_start + tlv_length
+        if payload_end > packet_end and tlv_length >= 8:
+            payload_end = cursor + tlv_length
+        if payload_end > packet_end:
+            break
         payload = data[payload_start:payload_end]
         if tlv_type == DETECTED_POINTS_TLV:
             points = parse_points(payload)
@@ -98,7 +105,13 @@ def parse_file(path: Path) -> list[dict]:
 
 
 def parse_data(data: bytes) -> list[dict]:
-    return [parse_frame(data, offset) for offset in find_packet_offsets(data)]
+    frames = []
+    for offset in find_packet_offsets(data):
+        try:
+            frames.append(parse_frame(data, offset))
+        except struct.error:
+            continue
+    return frames
 
 
 def main() -> None:

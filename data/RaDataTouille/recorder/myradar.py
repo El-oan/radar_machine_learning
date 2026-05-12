@@ -73,7 +73,18 @@ class myradar:
             sleep(0.01)
 
     def is_connected(self):
-        return self._config_serial is not None and self._data_serial is not None
+        if self._config_serial is None or self._data_serial is None:
+            return False
+        if not self._config_serial.is_open or not self._data_serial.is_open:
+            return False
+        try:
+            self._config_serial.reset_input_buffer()
+            self._config_serial.write(b"queryDemoStatus\n")
+            sleep(0.05)
+            response = self._config_serial.read_all().decode(errors="ignore")
+        except serial.SerialException:
+            return False
+        return bool(response.strip())
 
     def check(self):
         self.sendcmd("queryDemoStatus")
@@ -89,13 +100,16 @@ class myradar:
     def read_stream(self, duration_s):
         data = bytes()
         deadline = time() + duration_s
-        while time() < deadline:
-            if self._data_serial.in_waiting > 0:
+        try:
+            while time() < deadline:
+                if self._data_serial.in_waiting > 0:
+                    data += self._data_serial.read_all()
+                sleep(0.01)
+            while self._data_serial.in_waiting > 0:
                 data += self._data_serial.read_all()
-            sleep(0.01)
-        while self._data_serial.in_waiting > 0:
-            data += self._data_serial.read_all()
-            sleep(0.01)
+                sleep(0.01)
+        except serial.SerialException:
+            return data
         return data
 
     def capture(self, cfg, duration_s):
@@ -103,7 +117,10 @@ class myradar:
         self.apply_cfg(cfg)
         sleep(0.1)
         data = self.read_stream(duration_s)
-        self.sendcmd("sensorStop")
+        try:
+            self.sendcmd("sensorStop")
+        except serial.SerialException:
+            return data
         return data
 
 

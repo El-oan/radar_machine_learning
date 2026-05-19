@@ -8,7 +8,7 @@ the code test the pointnet architecture (V1: original pointnet, V2: attention ad
 
 data/ -> contains the radar datasets. there is the dataset radHAR (also called MMActivity) used by the 2019 radHAR paper. the ModelNET40 dataset, used by the original 2017 pointnet paper, and RaDAtaTouille, the dataset we recorders ourselves using our radar.
 
-radHAR: 5 classes (walking, jumping, jumping jacks, squats, and boxing),  93 minutes of recording (features: x,y,z, range, velocity, Doppler bin, bearing, and intensity)
+radHAR: 5 classes (walking, jumping, jumping jacks, squats, and boxing),  93 minutes of recording (features: x,y,z, range, velocity, Doppler bin, bearing, and intensity) (TI IWR1443 mmWave radar)
 ModelNET40: 40 classes (40 items, such as plane, bathtub etc)
 RaDAtaTouille: 2 classes (sat and standing up), (features: x,y,z, velocity, noise, snr)
 

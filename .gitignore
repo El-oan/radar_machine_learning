@@ -16,6 +16,7 @@ data/ModelNet40
 data/RadHARclean
 
 # Checkpoints
+checkpoints/MARS/checkpoint*.pt
 checkpoints/checkpoint*.pt
 checkpoints/radHAR/checkpoint*.pt
 checkpoints/raDataTouille/checkpoint*.pt

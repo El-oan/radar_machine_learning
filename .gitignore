@@ -12,12 +12,13 @@ wheels/
 .DS_Store
 
 # Data
-data/ModelNet40
+data/ModelNet40/*
 data/RadHARclean
+data/DGUHA/*
 
 # Checkpoints
 checkpoints/MARS/checkpoint*.pt
-checkpoints/checkpoint*.pt
+checkpoints/MARS_DGCNN/*.pt
 checkpoints/radHAR/checkpoint*.pt
 checkpoints/raDataTouille/checkpoint*.pt
 checkpoints/modelNET/checkpoint*.pt

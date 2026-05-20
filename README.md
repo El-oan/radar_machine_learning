@@ -11,6 +11,7 @@ data/ -> contains the radar datasets. there is the dataset radHAR (also called M
 radHAR: 5 classes (walking, jumping, jumping jacks, squats, and boxing),  93 minutes of recording (features: x,y,z, range, velocity, Doppler bin, bearing, and intensity) (TI IWR1443 mmWave radar)
 ModelNET40: 40 classes (40 items, such as plane, bathtub etc)
 RaDAtaTouille: 2 classes (sat and standing up), (features: x,y,z, velocity, noise, snr)
+DGUHA: https://github.com/AIC-DGU/MTGEA
 
 results/ -> contains the graphs and plots obtained form all the trials of the different architecture, loss and gradient plots, and F1/accuracy plots.
 

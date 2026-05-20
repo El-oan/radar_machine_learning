@@ -1,0 +1,68 @@
+{
+  "record": {
+    "name": "record1",
+    "duration": 123,
+    "date": "2026-05-20T16:42+02:00",
+    "user_name": "eloan en bouyges en chemise",
+    "user_size": "178",
+    "distance": "4"
+  },
+  "frames": [
+    {
+      "frame_number": 4,
+      "points": [
+        {
+          "x": -0.002709,
+          "y": 0.072259,
+          "z": -0.048757,
+          "velocity": 0.0,
+          "snr": 344,
+          "noise": 497
+        },
+        {
+          "x": 0.059592,
+          "y": 0.022438,
+          "z": -0.059592,
+          "velocity": 0.0,
+          "snr": 344,
+          "noise": 497
+        },
+        {
+          "x": -0.36839,
+          "y": 1.375011,
+          "z": 0.414438,
+          "velocity": 0.0,
+          "snr": 116,
+          "noise": 479
+        },
+        {
+          "x": -1.38417,
+          "y": 2.453106,
+          "z": -1.483039,
+          "velocity": 0.0,
+          "snr": 120,
+          "noise": 554
+        },
+        {
+          "x": -3.022961,
+          "y": 4.084888,
+          "z": 1.847365,
+          "velocity": 0.0,
+          "snr": 227,
+          "noise": 584
+        },
+        {
+          "x": -1.877162,
+          "y": 4.810472,
+          "z": 1.877162,
+          "velocity": 0.0,
+          "snr": 234,
+          "noise": 589
+        }
+      ],
+      "block_time_s": 0.0,
+      "session_time_s": 0.0,
+      "label": "sit"
+    }
+  ]
+}

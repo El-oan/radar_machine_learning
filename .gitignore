@@ -13,6 +13,7 @@ wheels/
 
 # Data
 data/ModelNet40
+data/MARS
 data/RadHARclean
 
 # Checkpoints

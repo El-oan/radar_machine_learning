@@ -18,6 +18,7 @@ datasets/DGUHA/*
 checkpoints/MARS/checkpoint*.pt
 checkpoints/DGUHA/*.pt
 checkpoints/MARS_DGCNN/*.pt
+checkpoints/MARS_SK_DGCNN/*.pt
 checkpoints/radHAR/checkpoint*.pt
 checkpoints/radHARV2/*.pt
 checkpoints/raDataTouille/checkpoint*.pt

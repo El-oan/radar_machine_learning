@@ -1,23 +1,20 @@
-this is the repo containing the code and data for our comparative study.
+This repo aims at ilmplementing 3 different deep learning alogrithm (PointNet, a twekaed pointet, and SK-DGCNN network) to classify human activity (running, standing etc) from radar points clouds. 
+this repository is organized as such:
 
+src/ -> contains all the code of the models: the architecture, the data preparation and the training pipelines. each notebook contains a model applied a specifid dataset.
 
-the repos is organized as such:
+datasets/ -> contains all the radar datasets. teh dataset we used are those ones:
+radHAR (also called MMActivity): from the 2019 radHAR paper. contains 5 classes (walking, jumping, jumping jacks, squats, and boxing),  93 minutes of recording, and 8 features: x,y,z, range, velocity, Doppler bin, bearing, and intensity. the radar used is a TI IWR1443 mmWave radar. There is a time dimension for the recordings
 
-src/ -> contains the code of the models: the architecture, the data preparation and the training pipeline
-the code test the pointnet architecture (V1: original pointnet, V2: attention added) on mutiple datasets
+ModelNET40: used by the original 2017 pointnet paper, contains 40 classes (40 items, such as plane, bathtub etc). The datseat only has 3 features (x, y and z)
 
-data/ -> contains the radar datasets. there is the dataset radHAR (also called MMActivity) used by the 2019 radHAR paper. the ModelNET40 dataset, used by the original 2017 pointnet paper, and RaDAtaTouille, the dataset we recorders ourselves using our radar.
+RaDAtaTouille: the dataset we recordered ourselves using our radar. It uses 6 features: x,y, z, snr, velocity and noise.
 
-radHAR: 5 classes (walking, jumping, jumping jacks, squats, and boxing),  93 minutes of recording (features: x,y,z, range, velocity, Doppler bin, bearing, and intensity) (TI IWR1443 mmWave radar)
-ModelNET40: 40 classes (40 items, such as plane, bathtub etc)
-RaDAtaTouille: 2 classes (sat and standing up), (features: x,y,z, velocity, noise, snr)
-DGUHA: https://github.com/AIC-DGU/MTGEA
+DGUHA: this dataset contains both radar points and recoding from kinect (used to draw the suer skeleton). It has 7 classes which are . The radar points only have three features: x, y and z. It is availble to downaload at https://drive.google.com/file/d/1wBEGb_rIJLsroDIDYG0_OJ_cb8f_MR3Q/view?usp=sharing
 
-results/ -> contains the graphs and plots obtained form all the trials of the different architecture, loss and gradient plots, and F1/accuracy plots.
+results/ -> contains the graphs and plots obtained form all the trials of the different architecture. It contains training and validation losses and gradient, and F1/accuracy plots for multiple checkpiints across epochs.
 
-papers/ -> contains the papers we read and used
+papers/ -> contains the papers I read and used.
 
-checkpoints/ -> contains the model weights checkpoints of some models, to save results and do quick inference to measure the scores
+checkpoints/ -> contains the model weights checkpoints of every models for every dataset, to save results and inference to measure the scores.
 
-idee pour ouverture: teteer à nombre de paraletres egaux et trouver le mielleur compromis nombre de paaprm et accuracy. 
-pour comparer il faut aussi le nombre d'epoch et donc le nombre d'operations necessaire au training.

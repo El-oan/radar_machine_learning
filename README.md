@@ -19,3 +19,5 @@ papers/ -> contains the papers we read and used
 
 checkpoints/ -> contains the model weights checkpoints of some models, to save results and do quick inference to measure the scores
 
+idee pour ouverture: teteer à nombre de paraletres egaux et trouver le mielleur compromis nombre de paaprm et accuracy. 
+pour comparer il faut aussi le nombre d'epoch et donc le nombre d'operations necessaire au training.

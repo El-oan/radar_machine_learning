@@ -16,10 +16,11 @@ The repository currently focuses on three point-cloud architectures:
 
 | Model | Description |
 | --- | --- |
-| PointNet | Original PointNet classifier architecture. |
-| Tweaked PointNet | PointNet improved with attention over the time dimension. |
+| PointNet | Original point-cloud classifier architecture, used as the baseline. |
+| Tweaked PointNet | PointNet adapted to radar sequences, with max pooling over points and attention over the time dimension. |
 | SK-DGCNN | Skeleton-aware Dynamic Graph CNN used on radar point clouds, especially for skeleton regression/classification experiments. |
 
+## Datasets
 
 ### RadHAR
 

@@ -13,14 +13,6 @@ Test accuracy: 0.9639
 {'boxing': 1.0, 'jack': 0.9915966391563416, 'jump': 0.9061224460601807, 'squats': 0.9958506226539612, 'walk': 0.9319728016853333}
 
 
-with V2 and smoothing and augmenation:
-Best validation checkpoint: checkpoint_29.pt
-Validation accuracy: 1.0000
-Test macro F1: 0.8961
-Test accuracy: 0.8918
-{'boxing': 0.9808428883552551, 'jack': 0.9385964870452881, 'jump': 0.7918089032173157, 'squats': 0.9066666960716248, 'walk': 0.8624535202980042}
-
-
 V2 without augmentation
 Best validation checkpoint: checkpoint_19.pt
 Validation accuracy: 1.0000
@@ -34,4 +26,11 @@ Validation accuracy: 1.0000
 Test macro F1: 0.9513
 Test accuracy: 0.9514
 {'boxing': 0.9591078162193298, 'jack': 0.9327354431152344, 'jump': 0.9176470637321472, 'squats': 0.9915966391563416, 'walk': 0.9553264379501343}
+
+V2 with smoothing augmentation and 40 epochs
+Best validation checkpoint: checkpoint_39.pt
+Validation accuracy: 1.0000
+Test macro F1: 0.9648
+Test accuracy: 0.9639
+{'boxing': 1.0, 'jack': 0.9745762944221497, 'jump': 0.9189189076423645, 'squats': 0.9831932783126831, 'walk': 0.9473684430122375}
 

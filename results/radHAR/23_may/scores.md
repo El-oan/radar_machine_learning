@@ -1,10 +1,11 @@
+V1 with smoothing and augmnetion
 Best validation checkpoint: checkpoint_14.pt
 Validation accuracy: 1.0000
 Test macro F1: 0.9650
 Test accuracy: 0.9639
 {'boxing': 1.0, 'jack': 1.0, 'jump': 0.9076305031776428, 'squats': 0.9790794849395752, 'walk': 0.9383561611175537}
 
-with 40 epochs:
+and with 40 epochs:
 Best validation checkpoint: checkpoint_33.pt
 Validation accuracy: 1.0000
 Test macro F1: 0.9651
@@ -18,3 +19,19 @@ Validation accuracy: 1.0000
 Test macro F1: 0.8961
 Test accuracy: 0.8918
 {'boxing': 0.9808428883552551, 'jack': 0.9385964870452881, 'jump': 0.7918089032173157, 'squats': 0.9066666960716248, 'walk': 0.8624535202980042}
+
+
+V2 without augmentation
+Best validation checkpoint: checkpoint_19.pt
+Validation accuracy: 1.0000
+Test macro F1: 0.9550
+Test accuracy: 0.9545
+{'boxing': 0.9961089491844177, 'jack': 0.9696969985961914, 'jump': 0.9061224460601807, 'squats': 0.9632652997970581, 'walk': 0.9395973086357117}
+
+V2 with augmentation
+Best validation checkpoint: checkpoint_19.pt
+Validation accuracy: 1.0000
+Test macro F1: 0.9513
+Test accuracy: 0.9514
+{'boxing': 0.9591078162193298, 'jack': 0.9327354431152344, 'jump': 0.9176470637321472, 'squats': 0.9915966391563416, 'walk': 0.9553264379501343}
+

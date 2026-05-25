@@ -1,0 +1,126 @@
+{
+  "pose_checkpoint": "datasets/SKradHAR/model.pt",
+  "mtime_ns": 1779732793960143877,
+  "radar_axis_mapping": {
+    "x": "RadHAR y",
+    "y": "RadHAR x",
+    "z": "RadHAR z"
+  },
+  "radar_frame_alignment": "translate spatial centroid to MARS training mean",
+  "normalized_feature_clip": 4.0,
+  "joint_names": [
+    "SpineBase",
+    "SpineMid",
+    "Neck",
+    "Head",
+    "ShoulderLeft",
+    "ElbowLeft",
+    "WristLeft",
+    "ShoulderRight",
+    "ElbowRight",
+    "WristRight",
+    "HipLeft",
+    "KneeLeft",
+    "AnkleLeft",
+    "FootLeft",
+    "HipRight",
+    "KneeRight",
+    "AnkleRight",
+    "FootRight",
+    "SpineShoulder"
+  ],
+  "coordinates": [
+    "x",
+    "z"
+  ],
+  "center_joint": "SpineShoulder",
+  "mars_train_mae_cm": 2.534067153930664,
+  "mars_train_joint_mae_cm": {
+    "SpineBase": 1.4672412872314453,
+    "SpineMid": 0.6244742274284363,
+    "Neck": 0.23407219350337982,
+    "Head": 0.8624534010887146,
+    "ShoulderLeft": 1.168485403060913,
+    "ElbowLeft": 3.2143571376800537,
+    "WristLeft": 5.339661598205566,
+    "ShoulderRight": 1.2152820825576782,
+    "ElbowRight": 3.328378438949585,
+    "WristRight": 5.223213195800781,
+    "HipLeft": 1.5990135669708252,
+    "KneeLeft": 2.731461524963379,
+    "AnkleLeft": 4.058172702789307,
+    "FootLeft": 4.562568664550781,
+    "HipRight": 1.6036428213119507,
+    "KneeRight": 2.713047504425049,
+    "AnkleRight": 3.828922986984253,
+    "FootRight": 4.309731960296631,
+    "SpineShoulder": 0.06309317797422409
+  },
+  "joint_confidence_scores": [
+    0.9046441912651062,
+    0.9900671243667603,
+    1.0881952047348022,
+    0.9577800035476685,
+    0.9274117350578308,
+    0.8262198567390442,
+    0.7754663228988647,
+    0.9234849810600281,
+    0.8227340579032898,
+    0.7776713371276855,
+    0.8960438966751099,
+    0.8424988985061646,
+    0.8029093146324158,
+    0.7911940217018127,
+    0.8957548141479492,
+    0.8431753516197205,
+    0.8087242245674133,
+    0.7968950271606445,
+    1.2192968130111694
+  ],
+  "normalized_radhar_feature_summary": {
+    "before_clipping": {
+      "x": {
+        "mean": 2.2930979337587587e-09,
+        "std": 1.0911455154418945
+      },
+      "y": {
+        "mean": 1.3069382021058118e-08,
+        "std": 9.652107238769531
+      },
+      "z": {
+        "mean": 2.7695859827758795e-08,
+        "std": 2.66591739654541
+      },
+      "velocity": {
+        "mean": -0.0027827108278870583,
+        "std": 1.0609211921691895
+      },
+      "intensity": {
+        "mean": -0.2866334319114685,
+        "std": 0.050766721367836
+      }
+    },
+    "after_clipping": {
+      "x": {
+        "mean": 0.028905004262924194,
+        "std": 0.9145015478134155
+      },
+      "y": {
+        "mean": -0.3964531421661377,
+        "std": 3.700998067855835
+      },
+      "z": {
+        "mean": 0.14893953502178192,
+        "std": 2.26179575920105
+      },
+      "velocity": {
+        "mean": 0.0002300584310432896,
+        "std": 0.45149773359298706
+      },
+      "intensity": {
+        "mean": -0.2866334319114685,
+        "std": 0.050766721367836
+      }
+    }
+  }
+}

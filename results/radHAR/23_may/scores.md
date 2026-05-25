@@ -13,6 +13,9 @@ Test accuracy: 0.9639
 {'boxing': 1.0, 'jack': 0.9915966391563416, 'jump': 0.9061224460601807, 'squats': 0.9958506226539612, 'walk': 0.9319728016853333}
 
 
+
+
+
 V2 without augmentation
 Best validation checkpoint: checkpoint_19.pt
 Validation accuracy: 1.0000

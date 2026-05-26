@@ -1,6 +1,6 @@
 
 
-
+skdgcnn + stgn++ results after first fix:
 Best validation checkpoint: checkpoint_71.pt
 Validation accuracy: 0.8870
 Test macro F1: 0.8573

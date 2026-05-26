@@ -4,3 +4,5 @@ pour comparer il faut aussi le nombre d'epoch et donc le nombre d'operations nec
 pour la presenation: presnter la diff des ajourts genre smoothing, augmentation, attention etc
 
 pointnet V2 demande peut etre plus d'epcohs de training
+
+conclsuion: fidna radar agnostic model

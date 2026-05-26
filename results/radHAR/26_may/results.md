@@ -24,9 +24,16 @@ FootRight: 9.1199
 SpineShoulder: 0.1994
 
 
-stgcn++ socres with x axis reset and jitter augmenatation:
+stgcn++ socres with x axis reset and jitter augmenatation and 100 epochs:
 Best validation checkpoint: checkpoint_87.pt
 Validation accuracy: 0.9246
 Test macro F1: 0.8805
 Test accuracy: 0.8780
 {'boxing': 0.8569434881210327, 'jack': 0.9241774082183838, 'jump': 0.8317241668701172, 'squats': 0.9461593627929688, 'walk': 0.8436806797981262}
+
+stgcn++ socres with 200 epochs
+Best validation checkpoint: checkpoint_142.pt
+Validation accuracy: 0.9419
+Test macro F1: 0.8724
+Test accuracy: 0.8706
+{'boxing': 0.8640569448471069, 'jack': 0.9213793277740479, 'jump': 0.7986440658569336, 'squats': 0.9483240246772766, 'walk': 0.8298368453979492}

@@ -23,7 +23,7 @@ The repository currently focuses on three point-cloud architectures:
 
 ### RadHAR
 
-RadHAR, also called MMActivity, comes from the 2019 RadHAR paper. It contains five classes: walking, jumping, jumping jacks, squats, and boxing. The original dataset contains 93 minutes of recording and eight raw features: `x`, `y`, `z`, `range`, `velocity`, `doppler_bin`, `bearing`, and `intensity`. The radar used is a TI IWR1443 mmWave radar. There is a time dimension in the recordings.
+RadHAR, also called MMActivity, comes from the 2019 RadHAR paper. It contains five classes: walking, jumping, jumping jacks, squats, and boxing. The original dataset contains 93 minutes of recording and eight raw features: `x`, `y`, `z`, `range`, `velocity`, `doppler_bin`, `bearing`, and `intensity`. The radar used is a TI IWR1443 mmWave radar. There is a time dimension in the recordings. `x` is the depth/front from antenna, `y` is lateral, right positive and `z` is vertical, up positive.
 
 | Split | Files | Frames |
 | --- | ---: | ---: |
@@ -67,12 +67,10 @@ The dataset is available to download at: <https://drive.google.com/file/d/1wBEGb
 
 ### MARS
 
-MARS (mmWave-based Assistive Rehabilitation System for Smart Healthcare) contains radar data and Kinect skeleton data for rehabilitation movements. The features are `x`, `y`, `z`, `Doppler velocity`, and `intensity`. The dataset has ten movement classes: left upper limb extension, right upper limb extension, both upper limb extension, left front lunge, right front lunge, squad, left side lunge, right side lunge, left limb extension, and right limb extension.
+MARS (mmWave-based Assistive Rehabilitation System for Smart Healthcare) contains radar data and Kinect skeleton data for rehabilitation movements. The features are `x`, `y`, `z`, `Doppler velocity`, and `intensity`. The dataset has ten movement classes: left upper limb extension, right upper limb extension, both upper limb extension, left front lunge, right front lunge, squad, left side lunge, right side lunge, left limb extension, and right limb extension. `x` is the lateral, `y` is depth and `z` is vertical.
 
 | Split | Recordings | Frames |
 | --- | ---: | ---: |
 | Train | 29 | 28,221 |
 | Test | 10 | 11,801 |
 | Total | 39 | 40,022 |
-
-

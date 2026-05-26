@@ -37,3 +37,19 @@ Validation accuracy: 0.9419
 Test macro F1: 0.8724
 Test accuracy: 0.8706
 {'boxing': 0.8640569448471069, 'jack': 0.9213793277740479, 'jump': 0.7986440658569336, 'squats': 0.9483240246772766, 'walk': 0.8298368453979492}
+
+and with the last checkpoint:
+Best validation checkpoint: checkpoint_199.pt
+Validation accuracy: 0.9419
+Test macro F1: 0.8848
+Test accuracy: 0.8821
+{'boxing': 0.8553191423416138, 'jack': 0.9406657218933105, 'jump': 0.8466257452964783, 'squats': 0.9463414549827576, 'walk': 0.8352017998695374}
+
+
+
+with preper vertial axis
+Best validation checkpoint: checkpoint_97.pt
+Validation accuracy: 0.9294
+Test macro F1: 0.8879
+Test accuracy: 0.8877
+{'boxing': 0.9496688842773438, 'jack': 0.8988439440727234, 'jump': 0.8291009068489075, 'squats': 0.8902953863143921, 'walk': 0.8715542554855347}

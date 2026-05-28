@@ -11,6 +11,8 @@ wheels/
 .env
 .DS_Store
 
+src/SK-DGCNN/SK-DGCNN-review
+
 # Data
 datasets/ModelNet40/*
 datasets/DGUHA/*

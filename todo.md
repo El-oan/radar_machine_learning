@@ -6,3 +6,5 @@ pour la presenation: presnter la diff des ajourts genre smoothing, augmentation,
 pointnet V2 demande peut etre plus d'epcohs de training
 
 conclsuion: fidna radar agnostic model
+
+choose 10 seeds number and repost test scores for those 10 trials

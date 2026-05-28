@@ -21,7 +21,7 @@
     ]
   },
   "radar_frame_alignment": "translate spatial centroid to MARS training mean",
-  "normalized_feature_clip": 4.0,
+  "clipping": 4.0,
   "joint_names": [
     "SpineBase",
     "SpineMid",

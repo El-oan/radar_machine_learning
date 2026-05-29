@@ -20,4 +20,10 @@ Test macro F1: 0.9449
 Test accuracy: 0.9441
 {'running': 0.9387755393981934, 'jumping': 0.930232584476471, 'sitting_down_and_standing_up': 1.0, 'both_upper_limb_extension': 0.930232584476471, 'falling_forward': 1.0, 'right_limb_extension': 0.930232584476471, 'left_limb_extension': 0.8846153616905212}
 
+dgcnn
+Best validation checkpoint: checkpoint_35.pt
+Validation accuracy: 0.9328
+Test macro F1: 0.9497
+Test accuracy: 0.9503
+{'running': 1.0, 'jumping': 1.0, 'sitting_down_and_standing_up': 0.978723406791687, 'both_upper_limb_extension': 0.8444444537162781, 'falling_forward': 1.0, 'right_limb_extension': 0.9047619104385376, 'left_limb_extension': 0.9200000166893005}
 

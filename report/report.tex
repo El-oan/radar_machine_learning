@@ -1,12 +1,12 @@
 \documentclass{article}
 \usepackage{arxiv}
-
 \usepackage[T1]{fontenc}
 \usepackage[utf8]{inputenc}
 \usepackage{hyperref}
 \usepackage{url}
 \usepackage{booktabs}
 \usepackage{amsfonts}
+\usepackage{amsmath}
 \usepackage{nicefrac}
 \usepackage{microtype}
 \usepackage{graphicx}
@@ -14,11 +14,10 @@
 
 
 \title{Radar Posture Classification: A Comparative Study of SOTA Architectures}
-\author{Eloan Tourtelier, Othmane Ouali, Lucas Cheylan}
+\author{Eloan Tourtelier, Othmane Ouali, Lucas Cheylan, Mellouki Meriem,Tarhda Zaineb}
 \date{2026}
 
 \begin{document}
-
 \maketitle
 
 \begin{abstract}
@@ -30,54 +29,449 @@ architectures for distinguishing between sitting and standing positions. We desc
 
 \section{Introduction}
 
+%==============================================================
+%                          DATA
+%==============================================================
+\section{Data}
+
+\subsection{RadHAR dataset}
+\label{sec:radhar}
+
+The RadHAR dataset, introduced by Singh \textit{et al.}~\cite{singh2019radhar}
+at the 3rd ACM Workshop on Millimeter-Wave Networks and Sensing Systems
+(mmNets, 2019), is one of the most widely used public benchmarks for human
+activity recognition (HAR) from millimeter-wave (mmWave) radar point clouds.
+It is also referred to in the literature as the \emph{MMActivity} dataset.
+
+\paragraph{Acquisition setup.}
+Data was collected with a Texas Instruments \texttt{IWR1443BOOST} mmWave FMCW
+radar, a low-cost, commercial off-the-shelf sensor operating in the
+76--81~GHz band. The radar was mounted on a tripod at a height of
+$1.3$~m, facing the subject. The on-board signal-processing pipeline
+(through the \texttt{radar-lab} ROS package for TI mmWave devices)
+converts the raw intermediate-frequency signal into a stream of sparse 3D
+point clouds at a sampling rate of approximately $30$~Hz, i.e.\ one frame
+every $\approx 33$~ms.
+
+\paragraph{Activities and subjects.}
+Two participants performed five activities in front of the radar: boxing,
+jumping, jumping jacks, squats and walking. The dataset is shipped with a
+fixed train/test split, provided as separate \texttt{train/} and
+\texttt{test/} folders in the official repository. We use this split as-is
+throughout the paper, so that all our experiments remain comparable with
+prior work using RadHAR. We note however that the limited number of
+subjects (only two) is an important caveat: it limits the inter-subject
+variability seen at training time, and tends to inflate test accuracies
+compared to what one would expect on a more diverse population.
+
+\paragraph{Structure of a recording.}
+Each recording is a time-ordered sequence of \emph{radar frames}. Two
+properties make this representation fundamentally different from image or
+video data and condition every design choice that follows:
+\begin{itemize}
+    \item \textbf{Sparsity and variable cardinality.} Each frame contains
+    only a small, \emph{variable} number of detected points (typically a
+    few tens), since a low-cost mmWave radar produces sparse and
+    non-uniform point clouds.
+    \item \textbf{Unordered point sets.} Within a frame, points have no
+    natural ordering: a frame is a \emph{set}, not a sequence. Any
+    architecture operating directly on raw points should therefore be
+    permutation-invariant at the frame level.
+\end{itemize}
+
+For every detected point, six features are provided:
+
+\begin{center}
+\begin{tabular}{ll}
+\toprule
+Feature & Description \\
+\midrule
+$x, y, z$                   & Cartesian coordinates of the point (m) \\
+$r$ (\texttt{range})        & Radial distance from the radar (m) \\
+$v$ (\texttt{velocity})     & Doppler radial velocity (m/s) \\
+$\theta$ (\texttt{bearing}) & Azimuth angle (rad) \\
+$I$ (\texttt{intensity})    & Reflected signal intensity \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent The six features are not independent: Cartesian coordinates
+$(x,y,z)$, range $r$ and bearing $\theta$ are linked by the
+spherical-to-Cartesian relation, so the raw representation is
+\emph{redundant}. Which subset of features is actually fed to a model is
+therefore a non-trivial design choice. The different combinations we
+explored, and the rationale behind each, are detailed in
+Section~\ref{sec:preprocessing}.
+
+\paragraph{Temporal windowing.}
+Following the original RadHAR protocol, activities are classified over a
+sliding time window of $2$~seconds, which at $30$~fps corresponds to a
+sequence of $60$ consecutive frames. Each such window constitutes one
+labeled sample for the classifier. The resulting object is therefore a
+\emph{sequence of sets}: 60 unordered, variable-size point sets,
+collectively carrying a single activity label.
 
 
-\section{Architectures}
-\subsection{PointNet}
+\subsection{Homemade dataset}
+% Centering, normalization, padding/sampling to N points, temporal aggregation.
 
+
+%==============================================================
+%                  SKETCHING + TRANSFORMER
+%==============================================================
+\section{Sketching + Transformer}
+\label{sec:sketching-transformer}
+
+\subsection{Preprocessing: Random Fourier Feature sketching}
+\label{sec:preprocessing}
+
+\paragraph{Why preprocessing is needed.}
+A raw radar frame is an \emph{unordered set of points of variable
+cardinality}. No standard learning architecture --- be it an MLP, a CNN,
+a Transformer or a gradient-boosted tree --- can consume such an object
+directly: they all expect inputs of fixed shape and well-defined
+structure. A preprocessing step is therefore unavoidable. The original
+RadHAR baseline addresses this issue through \emph{voxelization}: each
+2-second window is discretized into a tensor of shape
+$60 \times 10 \times 32 \times 32 = 614\,400$ scalar
+features~\cite{singh2019radhar}. This representation is extremely
+high-dimensional and overwhelmingly sparse, since a typical frame
+contains only a few tens of points scattered in a grid of $10{,}240$
+voxels. The downstream model thus has to invest most of its capacity in
+processing empty space.
+
+We propose instead to compress each frame into a compact, fixed-size
+vector via a \emph{random Fourier feature map}, which preserves the
+information carried by the points while keeping the dimensionality
+manageable.
+
+\paragraph{Random Fourier feature sketching.}
+For a given choice of $d$ per-point features
+(see paragraph \emph{Feature selection} below), a frame at time $t$ is
+a point set $\mathcal{F}_t = \{p_1, \ldots, p_{N_t}\} \subset
+\mathbb{R}^d$, where $N_t$ varies from frame to frame. We map this set
+to a fixed-size sketch $s_t \in \mathbb{R}^m$ in two steps.
+
+\emph{Step 1 --- Per-point random projection.} We draw a single random
+matrix $W \in \mathbb{R}^{m \times d}$ with i.i.d.\ entries
+\[
+W_{ij} \;\sim\; \mathcal{N}(0, \sigma^2),
+\]
+\emph{once and for all} at the beginning of training, and freeze it.
+Each point $p_i$ is mapped to
+\[
+\varphi(p_i) \;=\; \sin(W p_i) \;\in\; \mathbb{R}^{m}.
+\]
+This is a Fourier-type random feature map (with bias $b = 0$ and using
+the sine component only), inspired by the random Fourier feature
+construction of Rahimi and Recht~\cite{rahimi2007random}. With
+$b = 0$ and a single trigonometric component, the inner product
+$\langle \varphi(p_i), \varphi(p_j)\rangle$ does not strictly
+approximate a Gaussian kernel; we use it nonetheless as a randomized,
+non-linear feature map, which proved sufficient for our task.
+
+\emph{Step 2 --- Aggregation across the frame.} Since
+$\mathcal{F}_t$ is a \emph{set}, the aggregation across its points must
+be permutation-invariant. We consider two variants:
+\begin{itemize}
+    \item \textbf{Uniform sketch:}
+    \(\displaystyle s_t \;=\; \frac{1}{N_t}\sum_{i=1}^{N_t} \sin(W p_i).\)
+    \item \textbf{Intensity-weighted sketch:}
+    \(\displaystyle s_t \;=\; \frac{1}{\sum_i I_i}\sum_{i=1}^{N_t} I_i\,\sin(W p_i),\)
+\end{itemize}
+where $I_i$ denotes the reflected intensity of point $i$. The
+intensity-weighted variant gives more importance to high-confidence
+reflections, which in our experiments proved beneficial.
+
+The whole window is then represented by a tensor of shape
+$60 \times m$, obtained by stacking the 60 per-frame sketches.
+
+\paragraph{Feature standardization.}
+Per-point features live on widely different scales: range is in metres
+($r \in [0, 10]$ approximately), bearing in radians
+($\theta \in [-\pi, \pi]$), velocity in m/s, intensity on an arbitrary
+scale. Because the random projection $W p_i$ mixes all features
+linearly, this scale heterogeneity would make the choice of $\sigma$
+ill-defined. We therefore standardize every feature to zero mean and
+unit variance \emph{before} applying the sketching step. The
+per-feature mean $\mu$ and standard deviation $s$ are computed
+\emph{on the training set only}, and the same statistics are reused at
+test time, so that no information leaks from the test set into the
+preprocessing pipeline.
+
+\paragraph{Feature selection.}
+The six raw features per point ($x, y, z, r, v, \theta, I$) are
+redundant: $(x, y, z)$, $r$ and $\theta$ are linked by the
+spherical-to-Cartesian relation. Determining which subset is most
+informative is therefore an empirical question. We compared four
+configurations:
+
+\begin{center}
+\begin{tabular}{lll}
+\toprule
+Configuration       & Per-point features           & Aggregation \\
+\midrule
+All features        & $(x, y, z, r, v, \theta, I)$ & uniform \\
+Cartesian + I       & $(x, y, z, I)$               & uniform \\
+Polar + I           & $(\theta, r, I)$             & uniform \\
+Polar + I (weighted)& $(\theta, r, I)$             & $I$-weighted \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent The polar configuration $(\theta, r, I)$ consistently
+outperformed the Cartesian variants, which motivated the introduction
+of the intensity-weighted sketch as a refinement of that
+configuration. A detailed comparison is reported in the ablation
+study (Section~\ref{sec:ablation}).
+
+\paragraph{Sliding-window construction.}
+Each raw recording is segmented into 2-second windows (60 consecutive
+frames) using a sliding window with a stride of $10$ frames. This
+yields a controlled overlap (50 frames, $\approx 83\%$) between
+consecutive windows: small enough to keep them distinct from the
+classifier's point of view, large enough to make full use of the
+available recordings. The procedure produces a total of $12\,150$
+training windows and $3\,565$ test windows, in line with the official
+RadHAR train/test split.
+
+\paragraph{Hyperparameter choices.}
+The preprocessing pipeline introduces several hyperparameters whose
+impact is non-trivial: the random-projection scale $\sigma$, the
+sketch dimension $m$, the sliding-window stride, the per-point
+feature subset, and the aggregation scheme (uniform vs.\
+intensity-weighted). All of them were studied empirically; the
+corresponding ablation study is reported in
+Section~\ref{sec:ablation}. Unless stated otherwise, the rest of the
+paper uses $\sigma = 1$, $m = 256$, polar features
+$(\theta, r, I)$, intensity-weighted aggregation, and a stride of
+$10$ frames.
+
+\paragraph{Summary.}
+The full preprocessing pipeline can be summarized as
+\[
+\underbrace{\text{recording}}_{\text{raw \texttt{.txt}}}
+\;\rightarrow\;
+\underbrace{\text{frames}}_{\text{sets, var.\ size}}
+\;\rightarrow\;
+\underbrace{\text{2-s windows}}_{60 \text{ frames}}
+\;\rightarrow\;
+\underbrace{\text{sketched windows}}_{(60, m)}
+\;\rightarrow\;
+\text{model input.}
+\]
+The data finally fed to all models compared in this paper is therefore
+a tensor of shape $(12\,150, 60, 256)$ for training and
+$(3\,565, 60, 256)$ for testing.
+
+
+\subsection{Transformer encoder}
+% À venir
+
+
+\subsection{Training protocol}
+% À venir
+
+
+\subsection{Ablation studies}
+\label{sec:ablation}
+% À venir
+
+
+%==============================================================
+%                          POINTNET
+%==============================================================
+\section{Attention Pooling}
+There are two levels at which attention pooling is an interesting proposition: \par First 
+\section{PointNet}
 The PointNet architetcure is a fundamentalm Deep learning architecture applied on radar points, ie unoreder sets of points with their three spatial postions. It was frist made to classify a cloud fo point, and a forking branch of the model can also segment parts of the cloud point to cut it into recognized portions.
-
 The architecture is quite straighforward. It has to be point-order invariants as a cloud point doesnt have point ordering. The netword uses a specific block called a TNet, whihc from a hidden layer computes a matrix to apply to that hidden layer, hence making the point representaiton invariant to roations, sclaing or shearing (whihc is was we want for a point distribution). Those are the main two fetaures of the PointNet. It was origianlly trained for a dataset of 
-
 \begin{figure}[h]
     \centering
-    \includegraphics[width=0.6\textwidth]{pointnetarchi.png}
+    \includegraphics[width=0.6\textwidth]{../src/architecture.png}
     \caption{The architecture of a PointNet. The intresting layer is the TNet.}
     \label{fig:radar-point-cloud}
 \end{figure}
 
 
-\subsection{Moments}
-% Prior work on point clouds, engineered features, sparse radar representations.
+%==============================================================
+%                          MOMENTS
+%==============================================================
+%==============================================================
+%                          MOMENTS
+%==============================================================
+\section{Moments}
+\label{sec:moments}
 
-\subsection{XGBoost}
+\subsection{Motivation}
+
+The sketching approach described in Section~\ref{sec:sketching-transformer}
+compresses each frame into a fixed-size vector via a random Fourier feature map.
+A conceptually simpler alternative is to summarize the empirical distribution of
+points in a frame by its \emph{statistical moments}: mean, variance, skewness,
+kurtosis, and range. This representation is fully deterministic, requires no
+learned or random parameters, and is permutation-invariant by construction.
+
+While statistical moments cannot, in general, uniquely characterize an arbitrary
+distribution, a classical result in probability theory guarantees that the first
+$2N$ moments uniquely determine any discrete distribution supported on at most
+$N$ points~\cite{akhiezer1965classical}. Since each radar frame typically
+contains fewer than 30 points, a moderate number of moments is therefore
+\emph{sufficient to characterize the frame exactly}, up to point-set
+permutation. This property makes the moment representation particularly
+well-suited to the sparse radar setting, where voxel-based or
+Fourier-based approaches would introduce unnecessary complexity.
+
+\subsection{Preprocessing}
+\label{sec:moments-preprocessing}
+
+\paragraph{Feature selection.}
+Each detected point carries six raw features: $x, y, z$ (Cartesian
+coordinates), range $r$, radial velocity $v$, bearing $\theta$, and intensity
+$I$. As noted in Section~\ref{sec:radhar}, Cartesian coordinates and polar
+features are geometrically redundant. We found it sufficient to work with a
+compact five-dimensional per-point representation:
+\[
+p_i = (x_i,\; y_i,\; z_i,\; v_i,\; I_i) \;\in\; \mathbb{R}^5.
+\]
+
+\paragraph{Moment extraction.}
+For a frame $\mathcal{F}_t = \{p_1, \ldots, p_{N_t}\}$, we compute six
+statistics along each of the $d = 5$ feature dimensions:
+
+\begin{center}
+\begin{tabular}{ll}
+\toprule
+Statistic & Definition \\
+\midrule
+Mean          & $\mu_k = \frac{1}{N_t}\sum_i p_{ik}$ \\[4pt]
+Std.\ dev.    & $\sigma_k = \sqrt{\frac{1}{N_t}\sum_i (p_{ik}-\mu_k)^2}$ \\[4pt]
+Skewness      & $\gamma_{1,k} = \frac{1}{N_t}\sum_i \left(\frac{p_{ik}-\mu_k}{\sigma_k}\right)^3$ \\[4pt]
+Kurtosis      & $\gamma_{2,k} = \frac{1}{N_t}\sum_i \left(\frac{p_{ik}-\mu_k}{\sigma_k}\right)^4 - 3$ \\[4pt]
+Minimum       & $\min_i\, p_{ik}$ \\[4pt]
+Maximum       & $\max_i\, p_{ik}$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent Concatenating these statistics across all $d = 5$ dimensions yields a
+fixed-size descriptor
+\[
+s_t \;=\; \bigl[\mu_1,\,\sigma_1,\,\gamma_{1,1},\,\gamma_{2,1},\,
+               \min_1,\,\max_1,\;\ldots\;\bigr] \;\in\; \mathbb{R}^{30},
+\]
+regardless of the number of points $N_t$ in the frame. This descriptor serves
+as the input to the classifier described below.
+
+\paragraph{Temporal aggregation.}
+In contrast to the sketching pipeline, which operates over a 2-second window of
+60 frames and feeds a $(60, m)$ tensor to a sequential model, the moment
+baseline treats each frame \emph{independently}: a single frame is compressed
+into one 30-dimensional vector, which is passed directly to an MLP. This
+amounts to ignoring the temporal structure of the recording. The implications
+for performance and a discussion of how temporal information could be
+reintroduced are given in Section~\ref{sec:moments-discussion}.
+
+\paragraph{Standardization.}
+The 30-dimensional feature vector is standardized to zero mean and unit
+variance using statistics computed on the training set only, following the
+same protocol as in Section~\ref{sec:preprocessing}.
+
+\subsection{Architecture: Multi-Layer Perceptron}
+
+Since the 30-dimensional moment vector has no spatial or sequential structure,
+convolutional or recurrent architectures bring no benefit here. We therefore use
+a fully-connected MLP with three hidden layers:
+
+\begin{center}
+\begin{tabular}{llll}
+\toprule
+Layer   & Output dim & Activation & Note \\
+\midrule
+Input   & 30         & ---        & Standardized moment vector \\
+Dense 1 & 128        & ReLU       & \\
+Dense 2 & 64         & ReLU       & \\
+Dense 3 & 32         & ReLU       & \\
+Output  & 5          & Softmax    & One logit per activity class \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+The model is trained with early stopping (patience of 10 epochs,
+validation fraction 15\%) to prevent overfitting on the relatively small
+dataset. No dropout or weight decay was applied, as the model is already
+severely regularized by the low input dimensionality.
+
+\subsection{Results and Discussion}
+\label{sec:moments-discussion}
+
+Table~\ref{tab:moments-per-class} reports per-class precision, recall and
+F1-score on the RadHAR test set (58 samples, 5 classes).
+
+\begin{table}[h]
+\centering
+\caption{Per-class performance of the moment-based MLP on RadHAR (test set).}
+\label{tab:moments-per-class}
+\begin{tabular}{lcccc}
+\toprule
+Activity & Precision & Recall & F1-score & Support \\
+\midrule
+Boxing  & 0.52 & 0.85 & 0.65 & 13 \\
+Jack    & 0.67 & 0.20 & 0.31 & 10 \\
+Jump    & 0.62 & 0.45 & 0.53 & 11 \\
+Squats  & 1.00 & 0.20 & 0.33 & 10 \\
+Walk    & 0.58 & 1.00 & 0.74 & 14 \\
+\midrule
+\textbf{Overall accuracy} & \multicolumn{4}{c}{\textbf{58.6\%}} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\noindent The model achieves \textbf{58.6\%} accuracy, well above the
+random baseline of 20\%. Locomotor activities with a clear spatial signature
+(\textit{walk}: 100\% recall; \textit{boxing}: 85\% recall) are well captured
+by the moment representation. By contrast, activities involving repetitive
+vertical motion confined to a small spatial region (\textit{squats},
+\textit{jack}) are poorly recalled (20\%), likely because a single-frame
+moment descriptor cannot encode the periodicity that distinguishes these
+activities from a static standing posture.
+
+This limitation is a direct consequence of the \emph{temporal blindness} of
+the current approach. Integrating temporal information --- for instance by
+computing moments over a 2-second sliding window rather than per frame, or by
+feeding the sequence of per-frame descriptors to an LSTM --- is the most
+natural next step and is expected to close a significant part of the gap with
+the sequential architectures described in
+Section~\ref{sec:sketching-transformer}.
+
+%==============================================================
+%                          XGBOOST
+%==============================================================
+\section{XGBoost}
 % PointNet, PointNet++, PointMLP, transformer-based models, etc.
 
 
-
-\section{Data}
-\subsection{RadHAR dataset}
-% Briefly explain how raw radar is converted into point clouds.
-
-\subsection{Homemade dataset}
-% Centering, normalization, padding/sampling to N points, temporal aggregation.
-
-\subsection{Data processing and augmentation}
-
+%==============================================================
+%                          RESULTS
+%==============================================================
 \section{Results}
-\subsection{Comparisons}
+
+\subsection{Comparison}
 Here we compare evrything bout our different approchas, F1 and accuracy scores, amounf of parameters, Inference time etc.
 
-\section{Ablation Studies}
 
+%==============================================================
+%                        CONCLUSION
+%==============================================================
 \section{Conclusion}
 % Restate findings and next steps.
+
 
 \nocite{*}
 \bibliographystyle{plain}
 \bibliography{ref}
 
-
+\appendix
 \section{Appendix}
 
 \end{document}

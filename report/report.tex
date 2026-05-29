@@ -1,5 +1,5 @@
-\documentclass{article}
-\usepackage{arxiv}
+\documentclass[10pt,twocolumn]{article}
+\usepackage[letterpaper,margin=0.75in,columnsep=0.24in]{geometry}
 \usepackage[T1]{fontenc}
 \usepackage[utf8]{inputenc}
 \usepackage{hyperref}
@@ -11,29 +11,89 @@
 \usepackage{microtype}
 \usepackage{graphicx}
 \usepackage{lipsum}
+\usepackage{mathptmx}
+\usepackage{xcolor}
+\usepackage{array}
 
+\setlength{\parindent}{1em}
+\setlength{\parskip}{0pt}
+\setlength{\floatsep}{8pt plus 2pt minus 2pt}
+\setlength{\textfloatsep}{8pt plus 2pt minus 2pt}
+\setlength{\intextsep}{8pt plus 2pt minus 2pt}
+\setcounter{tocdepth}{1}
+
+\makeatletter
+\newcommand{\compacttoc}{%
+  \begingroup
+  \footnotesize
+  \section*{\normalsize Contents}
+  \vspace{-0.75em}
+  \@starttoc{toc}
+  \endgroup
+}
+\makeatother
+
+\makeatletter
+\renewcommand{\section}{%
+  \@startsection{section}{1}{\z@}%
+  {-2.0ex \@plus -0.5ex \@minus -0.2ex}%
+  {1.0ex \@plus 0.2ex}%
+  {\normalfont\large\bfseries\MakeUppercase}}
+\renewcommand{\subsection}{%
+  \@startsection{subsection}{2}{\z@}%
+  {-1.6ex \@plus -0.4ex \@minus -0.2ex}%
+  {0.7ex \@plus 0.2ex}%
+  {\normalfont\normalsize\bfseries}}
+\makeatother
+
+\newcommand{\missing}{--}
 
 \title{Radar Posture Classification: A Comparative Study of SOTA Architectures}
-\author{Eloan Tourtelier, Othmane Ouali, Lucas Cheylan, Mellouki Meriem,Tarhda Zaineb}
-\date{June 2026}
+\author{
+Eloan Tourtelier\\
+CentraleSupélec\\
+\texttt{eloan.tourtelier@student-cs.fr}
+\and
+Othmane Ouali\\
+CentraleSupélec\\
+\texttt{othmane.ouali@student-cs.fr}
+\and
+Lucas Cheylan\\
+CentraleSupélec\\
+\texttt{lucas.cheylan@student-cs.fr}
+\and
+Meriem Mellouki\\
+CentraleSupélec\\
+\texttt{meriem.mellouki@student-cs.fr}
+\and
+Zaineb Tarhda\\
+CentraleSupélec\\
+\texttt{zaineb.tarhda@student-cs.fr}
+}
+\date{}
 
 \begin{document}
+\twocolumn[
 \maketitle
 
-\begin{abstract}
-We study posture classification from radar point clouds and compare several model
-architectures for distinguishing between sitting and standing positions. We describe our radar point representation, training protocol, and evaluation setting, and we benchmark multiple baselines under the same experimental conditions. Our results highlight which architectural choices are most effective for sparse radar point data and provide practical guidance for future radar-based human state recognition.
-\end{abstract}
+\compacttoc
+\vspace{2em}
+]
 
-\tableofcontents
-\twocolumn
+\section*{Abstract}
 
-\section{Introduction}
+We study posture classification from radar point clouds and compare several
+model architectures for distinguishing between sitting and standing positions.
+We describe our radar point representation, training protocol, and evaluation
+setting, and we benchmark multiple baselines under the same experimental
+conditions. Our results highlight which architectural choices are most effective
+for sparse radar point data and provide practical guidance for future
+radar-based human state recognition.
 
 %==============================================================
 %                          DATA
 %==============================================================
-\section{Datasets studied}
+\section{Datasets used}
 
 We studied every radar dataset stored in the repository except ModelNet40,
 which is a generic 3D object benchmark rather than a radar human-activity
@@ -43,20 +103,19 @@ SK-DGCNN-style experiments.
 
 \begin{table*}[t]
 \centering
-\begin{tabular}{llll}
+\begin{tabular}{llrll}
 \toprule
-Dataset & Source & Classes & Main features \\
+Dataset & Radar used & Classes & Total frames & Features \\
 \midrule
-RadHAR / MMActivity & Public mmWave HAR & 5 & $x,y,z$, range, velocity, bearing, intensity \\
-RaDataTouille & In-house recording & 2 & $x,y,z$, SNR, velocity, noise \\
-DGUHA & Public radar + Kinect & 7 & $x,y,z$ radar points \\
-MARS & Public radar + Kinect & 10 & $x,y,z$, Doppler velocity, intensity \\
-SKradHAR & Derived from RadHAR & 5 & Predicted skeleton joints \\
+RadHAR / MMActivity & TI IWR1443 & 5 & 167,632 & $x,y,z$, range, velocity, bearing, intensity \\
+RaDataTouille & TI xWR68xx AOP & 2 & 27,411 & $x,y,z$, SNR, velocity, noise \\
+DGUHA & mmWave radar & 7 & 307,200 & $x,y,z$ \\
+MARS & mmWave radar & 10 & 40,022 & $x,y,z$, Doppler velocity, intensity \\
 \bottomrule
 \end{tabular}
 \end{table*}
 
-\subsection{RadHAR dataset}
+\subsection{RadHAR}
 \label{sec:radhar}
 
 The RadHAR dataset, introduced by Singh \textit{et al.}~\cite{singh2019radhar}
@@ -104,6 +163,7 @@ video data and condition every design choice that follows:
 For every detected point, the following features are provided:
 
 \begin{center}
+\small
 \begin{tabular}{ll}
 \toprule
 Feature & Description \\
@@ -134,7 +194,7 @@ labeled sample for the classifier. The resulting object is therefore a
 collectively carrying a single activity label.
 
 
-\subsection{RaDataTouille dataset}
+\subsection{RaDataTouille}
 \label{sec:radatatouille}
 
 RaDataTouille is the dataset we recorded ourselves with a Texas Instruments
@@ -166,7 +226,7 @@ Total & 19 & 27,411 \\
 \end{tabular}
 \end{center}
 
-\subsection{DGUHA dataset}
+\subsection{DGUHA}
 \label{sec:dguha}
 
 DGUHA, the Dongguk University Human Activity dataset, was introduced by Lee and
@@ -195,7 +255,7 @@ Total & 768 & 307,200 \\
 \end{tabular}
 \end{center}
 
-\subsection{MARS dataset}
+\subsection{MARS}
 \label{sec:mars}
 
 MARS, for \emph{mmWave-based Assistive Rehabilitation System for Smart
@@ -379,15 +439,12 @@ $10$ frames.
 \paragraph{Summary.}
 The full preprocessing pipeline can be summarized as
 \[
-\underbrace{\text{recording}}_{\text{raw \texttt{.txt}}}
-\;\rightarrow\;
-\underbrace{\text{frames}}_{\text{sets, var.\ size}}
-\;\rightarrow\;
-\underbrace{\text{2-s windows}}_{60 \text{ frames}}
-\;\rightarrow\;
-\underbrace{\text{sketched windows}}_{(60, m)}
-\;\rightarrow\;
-\text{model input.}
+\begin{aligned}
+\text{recording} &\rightarrow \text{frames}
+\rightarrow \text{2-s windows} \\
+&\rightarrow \text{sketched windows}
+\rightarrow \text{model input.}
+\end{aligned}
 \]
 The data finally fed to all models compared in this paper is therefore
 a tensor of shape $(12\,150, 60, 256)$ for training and
@@ -410,17 +467,60 @@ $(3\,565, 60, 256)$ for testing.
 %==============================================================
 %                          POINTNET
 %==============================================================
-\section{Attention Pooling}
-There are two levels at which attention pooling is an interesting proposition: \par First 
 \section{PointNet}
-The PointNet architetcure is a fundamentalm Deep learning architecture applied on radar points, ie unoreder sets of points with their three spatial postions. It was frist made to classify a cloud fo point, and a forking branch of the model can also segment parts of the cloud point to cut it into recognized portions.
-The architecture is quite straighforward. It has to be point-order invariants as a cloud point doesnt have point ordering. The netword uses a specific block called a TNet, whihc from a hidden layer computes a matrix to apply to that hidden layer, hence making the point representaiton invariant to roations, sclaing or shearing (whihc is was we want for a point distribution). Those are the main two fetaures of the PointNet. It was origianlly trained for a dataset of 
-\begin{figure}[h]
+\label{sec:pointnet}
+
+PointNet~\cite{qi2017pointnet} is a natural baseline for radar point clouds
+because it was designed to process unordered sets of points directly. In this
+project, we use two variants. The first one, stored in
+\texttt{src/pointnetV1/}, is the vanilla PointNet classifier. The second one,
+stored in \texttt{src/pointnetV2/}, keeps the same point-wise backbone but adds
+attention pooling along the temporal dimension.
+
+\subsection{Vanilla PointNet}
+\label{sec:vanilla-pointnet}
+
+Vanilla PointNet, referred to as V1 in the repository, treats each radar frame
+as an unordered point set. Each point is first embedded independently by shared
+multi-layer perceptrons. A symmetric max-pooling operation is then used to
+aggregate all point embeddings into a single global descriptor. This pooling
+step is the key operation that makes the network invariant to the order in
+which the radar points are given.
+
+The original architecture also uses transformation networks, or T-Nets, to
+predict alignment matrices applied to the input points and intermediate
+features. These learned transformations help the model become more robust to
+geometric changes such as rotations, translations or scaling. In our V1
+experiments, PointNet is used as the direct point-cloud baseline: it learns
+activity classes from the radar points without adding an explicit temporal
+attention mechanism.
+
+\begin{figure}[t]
     \centering
-    \includegraphics[width=0.6\textwidth]{../src/architecture.png}
-    \caption{The architecture of a PointNet. The intresting layer is the TNet.}
+    \includegraphics[width=\columnwidth]{../src/architecture.png}
+    \caption{Vanilla PointNet architecture. The T-Net modules learn geometric
+    alignments, while max pooling produces an order-invariant point-set
+    descriptor.}
     \label{fig:radar-point-cloud}
 \end{figure}
+
+\subsection{Attention PointNet}
+\label{sec:attention-pointnet}
+
+Attention PointNet, referred to as V2 in the repository, was introduced because
+radar activity recognition is not only a spatial point-cloud problem. In each
+frame, the order of points is irrelevant, so the PointNet max-pooling operation
+is still appropriate. Across frames, however, order matters: walking, jumping
+or squatting are defined by how the point cloud evolves over time.
+
+The V2 model therefore keeps the PointNet frame encoder but replaces the purely
+static interpretation of the recording with an attention-based temporal
+aggregation. PointNet first produces one descriptor per frame, preserving the
+per-frame permutation invariance of V1. Attention is then applied across the
+sequence of frame descriptors so that the model can learn which time steps are
+most informative for the final activity decision. This makes V2 a direct
+extension of V1: the spatial encoder remains PointNet, while the temporal
+pooling is made learnable instead of being reduced to a fixed aggregation.
 
 
 %==============================================================
@@ -512,7 +612,11 @@ Since the 30-dimensional moment vector has no spatial or sequential structure,
 convolutional or recurrent architectures bring no benefit here. We therefore use
 a fully-connected MLP with three hidden layers:
 
-\begin{center}
+\begin{table*}[t]
+\centering
+\caption{MLP architecture used for the moment-based baseline.}
+\label{tab:moments-mlp}
+\small
 \begin{tabular}{llll}
 \toprule
 Layer   & Output dim & Activation & Note \\
@@ -524,7 +628,7 @@ Dense 3 & 32         & ReLU       & \\
 Output  & 5          & Softmax    & One logit per activity class \\
 \bottomrule
 \end{tabular}
-\end{center}
+\end{table*}
 
 The model is trained with early stopping (patience of 10 epochs,
 validation fraction 15\%) to prevent overfitting on the relatively small
@@ -537,10 +641,11 @@ severely regularized by the low input dimensionality.
 Table~\ref{tab:moments-per-class} reports per-class precision, recall and
 F1-score on the RadHAR test set (58 samples, 5 classes).
 
-\begin{table}[h]
+\begin{table*}[t]
 \centering
 \caption{Per-class performance of the moment-based MLP on RadHAR (test set).}
 \label{tab:moments-per-class}
+\small
 \begin{tabular}{lcccc}
 \toprule
 Activity & Precision & Recall & F1-score & Support \\
@@ -554,7 +659,7 @@ Walk    & 0.58 & 1.00 & 0.74 & 14 \\
 \textbf{Overall accuracy} & \multicolumn{4}{c}{\textbf{58.6\%}} \\
 \bottomrule
 \end{tabular}
-\end{table}
+\end{table*}
 
 \noindent The model achieves \textbf{58.6\%} accuracy, well above the
 random baseline of 20\%. Locomotor activities with a clear spatial signature
@@ -576,7 +681,7 @@ Section~\ref{sec:sketching-transformer}.
 %==============================================================
 %                          XGBOOST
 %==============================================================
-\section{XGBoost}
+\section{Simple approaches}
 % PointNet, PointNet++, PointMLP, transformer-based models, etc.
 
 
@@ -586,7 +691,50 @@ Section~\ref{sec:sketching-transformer}.
 \section{Results}
 
 \subsection{Comparison}
-Here we compare evrything bout our different approchas, F1 and accuracy scores, amounf of parameters, Inference time etc.
+Table~\ref{tab:global-results} summarizes the comparison grid used for the
+main experiments. A dash indicates that the value has not yet been measured or
+could not be recovered consistently from the current experiment logs.
+
+\begin{table*}[t]
+\centering
+\caption{Global comparison table for the studied datasets and architectures.}
+\label{tab:global-results}
+\scriptsize
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{llrrrr}
+\toprule
+Dataset & Architecture & Params & Epochs & Test acc. & Test macro F1 \\
+\midrule
+RadHAR & PointNet V1 & \missing & 40 & 0.9639 & 0.9651 \\
+RadHAR & PointNet V2 & \missing & 40 & 0.9639 & 0.9648 \\
+RadHAR & DGCNN & \missing & 40 & 0.9592 & 0.9608 \\
+RadHAR & SK-DGCNN & \missing & 200 & 0.8877 & 0.8879 \\
+RadHAR & Moments MLP & 14,469 & \missing & 0.5860 & 0.5120 \\
+RadHAR & Sketching Transformer & \missing & \missing & \missing & \missing \\
+\midrule
+RaDataTouille & PointNet V1 & \missing & \missing & \missing & \missing \\
+RaDataTouille & PointNet V2 & \missing & \missing & 0.8487 & 0.8478 \\
+RaDataTouille & DGCNN & \missing & \missing & \missing & \missing \\
+RaDataTouille & SK-DGCNN & \missing & \missing & \missing & \missing \\
+RaDataTouille & Moments MLP & \missing & \missing & \missing & \missing \\
+RaDataTouille & Sketching Transformer & \missing & \missing & \missing & \missing \\
+\midrule
+DGUHA & PointNet V1 & \missing & \missing & 0.9255 & 0.9263 \\
+DGUHA & PointNet V2 & \missing & \missing & 0.9441 & 0.9449 \\
+DGUHA & DGCNN & \missing & \missing & 0.9503 & 0.9497 \\
+DGUHA & SK-DGCNN & \missing & \missing & \missing & \missing \\
+DGUHA & Moments MLP & \missing & \missing & \missing & \missing \\
+DGUHA & Sketching Transformer & \missing & \missing & \missing & \missing \\
+\midrule
+MARS & PointNet V1 & \missing & \missing & 0.8934 & 0.7862 \\
+MARS & PointNet V2 & \missing & \missing & 0.8607 & 0.7609 \\
+MARS & DGCNN & \missing & \missing & \missing & \missing \\
+MARS & SK-DGCNN & \missing & \missing & \missing & \missing \\
+MARS & Moments MLP & \missing & \missing & \missing & \missing \\
+MARS & Sketching Transformer & \missing & \missing & \missing & \missing \\
+\bottomrule
+\end{tabular}
+\end{table*}
 
 
 %==============================================================
@@ -597,8 +745,10 @@ Here we compare evrything bout our different approchas, F1 and accuracy scores, 
 
 
 \nocite{*}
+{\footnotesize\color{gray}
 \bibliographystyle{plain}
 \bibliography{ref}
+}
 
 \appendix
 \section{Appendix}

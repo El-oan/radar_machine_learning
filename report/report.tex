@@ -15,7 +15,7 @@
 
 \title{Radar Posture Classification: A Comparative Study of SOTA Architectures}
 \author{Eloan Tourtelier, Othmane Ouali, Lucas Cheylan, Mellouki Meriem,Tarhda Zaineb}
-\date{2026}
+\date{June 2026}
 
 \begin{document}
 \maketitle
@@ -26,13 +26,35 @@ architectures for distinguishing between sitting and standing positions. We desc
 \end{abstract}
 
 \tableofcontents
+\twocolumn
 
 \section{Introduction}
 
 %==============================================================
 %                          DATA
 %==============================================================
-\section{Data}
+\section{Datasets studied}
+
+We studied every radar dataset stored in the repository except ModelNet40,
+which is a generic 3D object benchmark rather than a radar human-activity
+dataset. The datasets therefore cover public mmWave HAR benchmarks, our own
+recordings, and one derived skeletonized version of RadHAR used for
+SK-DGCNN-style experiments.
+
+\begin{table*}[t]
+\centering
+\begin{tabular}{llll}
+\toprule
+Dataset & Source & Classes & Main features \\
+\midrule
+RadHAR / MMActivity & Public mmWave HAR & 5 & $x,y,z$, range, velocity, bearing, intensity \\
+RaDataTouille & In-house recording & 2 & $x,y,z$, SNR, velocity, noise \\
+DGUHA & Public radar + Kinect & 7 & $x,y,z$ radar points \\
+MARS & Public radar + Kinect & 10 & $x,y,z$, Doppler velocity, intensity \\
+SKradHAR & Derived from RadHAR & 5 & Predicted skeleton joints \\
+\bottomrule
+\end{tabular}
+\end{table*}
 
 \subsection{RadHAR dataset}
 \label{sec:radhar}
@@ -79,7 +101,7 @@ video data and condition every design choice that follows:
     permutation-invariant at the frame level.
 \end{itemize}
 
-For every detected point, six features are provided:
+For every detected point, the following features are provided:
 
 \begin{center}
 \begin{tabular}{ll}
@@ -95,7 +117,7 @@ $I$ (\texttt{intensity})    & Reflected signal intensity \\
 \end{tabular}
 \end{center}
 
-\noindent The six features are not independent: Cartesian coordinates
+\noindent These features are not independent: Cartesian coordinates
 $(x,y,z)$, range $r$ and bearing $\theta$ are linked by the
 spherical-to-Cartesian relation, so the raw representation is
 \emph{redundant}. Which subset of features is actually fed to a model is
@@ -112,8 +134,115 @@ labeled sample for the classifier. The resulting object is therefore a
 collectively carrying a single activity label.
 
 
-\subsection{Homemade dataset}
-% Centering, normalization, padding/sampling to N points, temporal aggregation.
+\subsection{RaDataTouille dataset}
+\label{sec:radatatouille}
+
+RaDataTouille is the dataset we recorded ourselves with a Texas Instruments
+\texttt{xWR68xx AOP} radar operating at 60~GHz. Contrary to the public
+benchmarks, it focuses on a smaller posture-recognition setting with two
+labels: \texttt{sit} and \texttt{stand up}. This makes it the closest dataset
+to the final application targeted by this project.
+
+Each detected radar point is represented by six features:
+\[
+(x, y, z, \mathrm{snr}, \mathrm{velocity}, \mathrm{noise}).
+\]
+The split used in the repository contains 13 training records and 6 test
+records, for a total of 19 recordings. In frame count, this corresponds to
+20,031 training frames and 7,380 test frames, or 27,411 frames overall. The
+dataset is therefore much smaller than RadHAR, DGUHA and MARS, which makes it
+useful for testing whether the studied architectures remain stable in a
+low-data regime.
+
+\begin{center}
+\begin{tabular}{lrr}
+\toprule
+Split & Records & Frames \\
+\midrule
+Train & 13 & 20,031 \\
+Test & 6 & 7,380 \\
+Total & 19 & 27,411 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\subsection{DGUHA dataset}
+\label{sec:dguha}
+
+DGUHA, the Dongguk University Human Activity dataset, was introduced by Lee and
+Kim in the MTGEA paper~\cite{lee2023mtgea}. It contains synchronized radar
+point clouds and Kinect recordings. The Kinect stream provides skeleton
+information, while the radar stream is used as the input point-cloud modality in
+our experiments. The activity labels cover seven actions: running, jumping,
+sitting down and standing up, both upper-limb extension, falling forward,
+right-limb extension and left-limb extension.
+
+For the experiments in this repository, each radar point is represented only
+by its Cartesian coordinates $(x,y,z)$. Each clip contains 400 frames, and
+each frame is represented with 25 radar points. The train/test split contains
+607 training clips and 161 test clips, for a total of 768 clips and 307,200
+frames.
+
+\begin{center}
+\begin{tabular}{lrr}
+\toprule
+Split & Clips & Frames \\
+\midrule
+Train & 607 & 242,800 \\
+Test & 161 & 64,400 \\
+Total & 768 & 307,200 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\subsection{MARS dataset}
+\label{sec:mars}
+
+MARS, for \emph{mmWave-based Assistive Rehabilitation System for Smart
+Healthcare}, is a rehabilitation-oriented dataset containing synchronized
+mmWave radar data and Kinect skeleton data. It targets ten movements: left
+upper-limb extension, right upper-limb extension, both upper-limb extension,
+left front lunge, right front lunge, squad, left side lunge, right side lunge,
+left-limb extension and right-limb extension.
+
+The radar representation contains five features per point:
+\[
+(x, y, z, \mathrm{Doppler\ velocity}, \mathrm{intensity}).
+\]
+In this dataset, $x$ is the lateral axis, $y$ is the depth axis and $z$ is
+the vertical axis. The repository split contains 29 training recordings and
+10 test recordings, corresponding to 28,221 training frames and 11,801 test
+frames.
+
+\begin{center}
+\begin{tabular}{lrr}
+\toprule
+Split & Recordings & Frames \\
+\midrule
+Train & 29 & 28,221 \\
+Test & 10 & 11,801 \\
+Total & 39 & 40,022 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+
+
+\label{sec:skradhar}
+
+SKradHAR is not an independent public dataset; it is a processed version of
+RadHAR produced for the skeleton-based experiments. The original RadHAR radar
+frames are passed through a pose-estimation checkpoint trained on MARS-style
+radar-to-skeleton supervision, and the resulting files store predicted
+skeletons instead of raw radar point clouds.
+
+This representation keeps the five RadHAR activity classes and the original
+train/test organization, but changes the input modality seen by the classifier:
+each sample is described by 19 predicted body joints, using lateral and
+vertical coordinates centered around the \texttt{SpineShoulder} joint. It is
+therefore useful for comparing direct point-cloud classifiers with the
+SK-DGCNN idea of first mapping sparse radar observations to a structured
+human-skeleton representation.
 
 
 %==============================================================

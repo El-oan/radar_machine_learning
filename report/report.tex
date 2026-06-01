@@ -86,14 +86,14 @@ CentraleSupélec & CentraleSupélec \\
 
 
 In this work, we study and benchmark different deep learning archietcture classifying 
-Human Activity Recognition (HAR) (eg: running, jumping, sitting etc..). The radar datsets 
-we used all were recorded by mmWave radars. Point cloud data offer strong potential due to their 
+Human Activity Recognition (HAR) (eg: running, jumping, sitting etc..). Point cloud data offer strong potential due to their 
 privacy-preserving and environment-agnostic properties (light condition etc). However, point cloud-based HAR 
 faces challenges like data sparsity, high computation cost, and a lack of large annotated datasets.
 
-The archietcture used in this paper are PointNet, a skeleton predictor based on a DGCNN, methods 
-using moments caracterisation and simpler machine learning classfieeris to compare as a baseline.
-Our datset range from 2 to 10 classes. Our results highlight which architectural choices are most effective
+The archietcture we study in this paper are PointNet, a skeleton predictor based on a DGCNN, methods 
+using moments caracterisation and simpler machine learning classfieeris to compare as a baseline. We 
+becnhcmarked our models on 4 datsets, all recorded with mmWave radars,
+and ranging from 2 to 10 classes. Our results highlight which architectural choices are most effective
 for sparse radar point data and provide practical guidance for future
 radar-based human state recognition.
 
@@ -104,10 +104,10 @@ radar-based human state recognition.
 
 We studied four radar point dataset, respectively radHAR, DGUHA,
 MARS and a datset we recoreded ourselves, whihc we named Radatatouille.
-They all comport different classes and differetn features, and all of which have a 
+They all comport different classes and differetn features, but all of which have a 
 time dimension, whihc some architectures use and some dont. Each "image" is called a frame, and 
-each frame contains from 4 to 40 radar points, whihc requires some strategy to fix the point 
-dimension. A group of frames is called a windows, and windows coantain a fixed amount of frames.
+each frame contains from 4 to 40 radar points, whihc requires some strategy to make that
+amount fixed. A group of frames is called a windows, and windows coantain a fixed amount of frames.
 We aim at keeping our windows to last around 2 seconds, whihc is realisitic time for out syteme
 to predict what pose the user is doing.
 
@@ -121,8 +121,8 @@ Dataset & Radar used & Classes & Total frames & Features \\
 \midrule
 RadHAR / MMActivity & TI IWR1443BOOST & 5 & 167,632 & $x,y,z$, range, velocity, bearing, intensity \\
 RaDataTouille & TI xWR68xx AOP & 2 & 27,411 & $x,y,z$, SNR, velocity, noise \\
-DGUHA & mmWave radar, model not specified & 7 & 307,200 & $x,y,z$ \\
-MARS & TI IWR1443BOOST mmWave radar & 10 & 40,022 & $x,y,z$, Doppler velocity, intensity \\
+DGUHA & TI IWR1443BOOST mmWave radar & 7 & 307,200 & $x,y,z$ \\
+MARS & TI IWR1443BOOST mmWave radar & 10 & 40,083 & $x,y,z$, Doppler velocity, intensity \\
 \bottomrule
 \end{tabular}
 }
@@ -193,6 +193,18 @@ samples per class on average, which is modest by deep-learning standards
 and makes per-subject variability a real concern given that only two
 subjects contributed data.
 
+\begin{center}
+\begin{tabular}{lrr}
+\toprule
+Split & Files & Frames \\
+\midrule
+Train & 142 & 128,947 \\
+Test & 58 & 38,685 \\
+Total & 200 & 167,632 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
 \paragraph{Temporal windowing.}
 Following the original RadHAR protocol, activities are classified over a
 sliding time window of $2$~seconds, which at $30$~fps corresponds to a
@@ -228,7 +240,8 @@ The split contains 13 training records and 6 test records, totaling 19
 recordings, 20,031 training frames and 7,380 test frames (27,411 frames
 overall). At roughly $15\times$ smaller than RadHAR by frame count, it is a
 meaningful stress test of whether the studied architectures generalize under
-limited supervision.
+limited supervision. The recordings are handled at $10$~fps in our tooling, so
+a $2$-second window corresponds to $20$ frames.
 
 \begin{center}
 \begin{tabular}{lrr}
@@ -251,20 +264,18 @@ point clouds and Kinect recordings, with seven activity labels: running,
 jumping, sitting down and standing up, both upper-limb extension, falling
 forward, right-limb extension and left-limb extension.
 
-The public release provides only Cartesian coordinates $(x,y,z)$ per radar
-point---no Doppler velocity or intensity. This is a significant constraint:
-Doppler velocity is one of the most discriminative features for human motion
-and is used by all other datasets in this study. Models trained or evaluated
-on DGUHA therefore cannot exploit velocity information, making cross-dataset
-comparison of feature-selection choices difficult.
+Each radar point used in this repository carries three features: Cartesian
+coordinates $(x,y,z)$.
 
 Each clip consists of 400 frames, and each frame is fixed at 25 points.
 Unlike RadHAR's sliding-window protocol, each clip is a complete,
 semantically bounded action: the 400-frame window was chosen to span one full
-execution of the movement. The train/test split contains 607 training clips
-and 161 test clips (768 total, 307,200 frames). The sensor hardware is not
-fully documented; the dataset description specifies a mmWave radar paired
-with a Kinect v2 but does not report the radar board model.
+execution of the movement. Since each activity recording lasts approximately
+$20$~seconds, DGUHA is about $20$~fps, so a $2$-second window corresponds to
+about $40$ frames. The train/test split contains 607 training clips
+and 161 test clips (768 total, 307,200 frames). The sensor is a Texas
+Instruments \texttt{IWR1443BOOST} mmWave radar---the same board used for
+RadHAR and MARS---paired with an Azure Kinect for ground-truth annotations.
 
 \begin{center}
 \begin{tabular}{lrr}
@@ -303,7 +314,8 @@ the evaluation measures genuine inter-subject generalization rather than
 interpolation within a single subject's sessions. This is a stricter and
 more realistic split than a random frame or window partition. The split
 contains 29 training recordings and 10 test recordings, corresponding to
-28,221 training frames and 11,801 test frames.
+28,221 training frames and 11,801 test frames. The radar frame duration is
+$100$~ms ($10$~fps), so a $2$-second window corresponds to $20$ frames.
 
 \paragraph{Note on data leakage in published results.}
 The original work associated with MARS reported results using a
@@ -325,7 +337,7 @@ Split & Recordings & Frames \\
 \midrule
 Train & 29 & 28,221 \\
 Test & 10 & 11,801 \\
-Total & 39 & 40,022 \\
+Total & 39 & 40,083 \\
 \bottomrule
 \end{tabular}
 \end{center}
@@ -498,44 +510,43 @@ $(3\,565, 60, 256)$ for testing.
 \section{PointNet}
 \label{sec:pointnet}
 
-PointNet~\cite{qi2017pointnet} is a natural baseline for radar point clouds
-because it was designed precisely for the setting that radar imposes: an
-unordered set of 3-D points with no pixel grid, no voxel ordering, and a
-variable cardinality that changes frame by frame. In this project we use two
-variants. V1 (\texttt{src/pointnetV1/}) is the original PointNet classifier
-validated on the ModelNet40 3-D object benchmark. V2 (\texttt{src/pointnetV2/})
-adapts the same spatial backbone for radar activity recognition by adding an
-explicit temporal encoder over the sequence of per-frame descriptors.
+PointNet~\cite{qi2017pointnet} is a fundamental model. It was built to process an
+unordered set of 3D points with no pixel grid, no voxel ordering. In this project we use two
+variants. V1 is the original vanilla PointNet classifier, which we
+validated on the ModelNet40 3-D object benchmark from the original PointNet paper.
+ V2 adds an explicit temporal processing (over the sequence of frames) using 
+ an attention mechanism, enabling each point from each frame to "talk" to themsleves
+ across the time windows.
 
 \subsection{Vanilla PointNet}
 \label{sec:vanilla-pointnet}
 
-Vanilla PointNet processes each radar frame as an unordered point set. Each
-point is embedded independently by a stack of shared MLPs that lift the
-per-point feature from its raw dimensionality through channels $64 \to 64 \to
-64 \to 128 \to 1024$. A global max-pooling operation then collapses all
-per-point embeddings into a single 1024-dimensional descriptor, regardless of
-how many points the frame contains. Because max-pooling is a symmetric function,
-the descriptor is invariant to the order in which points are presented---the
-critical property for radar data, where the CFAR detector returns points in
-arbitrary order. A three-layer MLP ($1024 \to 512 \to 256 \to C$) maps this
-descriptor to class logits.
+PointNet processes each radar frame as an unordered point set. The point cloud is first processed 
+by a TNet, which mutiplies the distributiion by a matrix to rotate/reflect the data,
+Each point is then processed independently by a stack of shared MLPs that incresease
+the dimensionality to $1024$. This process is repeated twice in the orgingal paper, but this can be increased.
+A global max-pooling operation then collapses along the point
+simension into a single 1024-dimensional descriptor. Because max-pooling is invaraint by
+permuation, it is invariant to the order in which points are presented. This permutation
+invaraince is critical for every model processing radar points
+,becasue detectors returns points in
+arbitrary order.
+Finally, a three-layer MLP head maps the max-pooling output to class logits.
 
-The architecture also includes two transformation networks (T-Nets). The input
-T-Net predicts a $3 \times 3$ matrix that is applied to the raw point
+A little more about the two transformation networks (T-Nets): The input
+T-Net predicts a $D \times D$ ($D$ the feature dimension) matrix that is applied to the raw point
 coordinates, canonicalizing the point cloud orientation before any learned
-embedding. The feature T-Net predicts a $64 \times 64$ matrix that aligns the
-intermediate feature space. Both matrices are regularized with an orthogonality
-penalty ($\lambda = 0.001$) to keep the learned transformations close to rigid
-rotations; without this constraint, the high-dimensional feature T-Net would
-easily overfit to arbitrary linear maps. Note that T-Nets correct for
-orientation but not for translation; centering the point cloud around its
-centroid prior to input is handled as a preprocessing step.
+embedding. Both matrices are regularized in the loss with an orthogonality
+penalty ($\lambda = 0.001$) to keep the learned transformations to a rotation and/or
+a reflection, making the lenghts, angles, and lvoumes unchanged;
+without this constraint, the high-dimensional feature T-Net would
+easily overfit to arbitrary linear maps, and we only want the Tnet to stick to
+reorient the distribution.
 
-\begin{figure}[t]
+\begin{figure}[H]
     \centering
     \includegraphics[width=\columnwidth]{images/pointnetarchi.png}
-    \caption{Vanilla PointNet architecture. The T-Net modules canonicalize
+    \caption{PointNet architecture. The T-Net modules canonicalize
     point-cloud orientation, while global max pooling produces an
     order-invariant descriptor.}
     \label{fig:radar-point-cloud}
@@ -544,27 +555,23 @@ centroid prior to input is handled as a preprocessing step.
 \subsection{Attention PointNet}
 \label{sec:attention-pointnet}
 
-Radar activity recognition is a two-level problem: within a single frame,
+Within a single frame,
 points are an unordered set and must be treated symmetrically; across frames,
-temporal order carries the activity signal. V1 solves only the spatial part.
-V2 addresses both levels by stacking a temporal encoder on top of the PointNet
-frame encoder.
+there is a insightful ordering, which carries information.
+V2 addresses this by stacking a temporal attention mechanism inside the PointNet
+ encoder, right after the TNet rotation.
 
-The input to V2 has shape $B \times T \times N \times D$, with $T = 60$ frames,
-$N = 64$ points per frame, and $D = 5$ features $(x, y, z, v_d, I)$. PointNet
-first encodes each frame independently---preserving per-frame permutation
-invariance---into a 1024-dimensional descriptor, yielding a sequence of $T$
-frame embeddings. Multi-head self-attention with 8 heads is then applied across
-this sequence, so that each frame can attend to all others and weight the time
+For the tatention mechanism, we use multi-head self-attention with 
+8 heads or less (depending if the dimension is large enough for 8 heags). 
+Each frame can attend to all others and weight the time
 steps most informative for the activity decision. Positional information is
 injected via \emph{Rotary Position Encoding} (RoPE), which encodes relative
-temporal distances rather than absolute positions. This matters in practice
-because activity windows may be trimmed or shifted, and RoPE generalizes to
-variable-length sequences without retraining. Mean pooling over the attended
-sequence produces the final activity descriptor, which is passed to a
-classification MLP ($1024 \to 512 \to C$). The model is trained on MARS
-(10 rehabilitation activities, subject-based split: 3~train, 1~validation,
-1~test subject), where it achieves approximately 86\% test accuracy.
+temporal distances rather than absolute positions between frames. 
+We add an attention layer after each TNet, and we hence have two blocks
+TNet --> time Attention --> MLP. The time diemsnion is mean pooled at the very end,
+after the max pooling (along the $N$ dimension), and right before the final logits generator.
+
+The addition of the time attention mechanism 
 
 %==============================================================
 %                 POINTWISE ATTENTION POOLING
@@ -888,7 +895,7 @@ skeleton has fixed joints, fixed semantics and a stable graph structure.
 \subsection{Radar-to-skeleton stage}
 
 The first stage is a skeleton-aware DGCNN regressor trained on MARS, where
-radar frames are synchronized with Kinect skeleton annotations. Each radar
+radar frames are synchronized with Kinect skeleton annotations. Each MARS radar
 frame is cropped or padded to 25 points and represented by five features:
 $x,y,z$, Doppler velocity and intensity. A dynamic $k$-nearest-neighbor graph
 is recomputed inside the network, and three EdgeConv blocks extract local

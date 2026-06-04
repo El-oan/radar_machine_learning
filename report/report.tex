@@ -499,7 +499,9 @@ We treat this sequence as a sequence of $60$ tokens and process it with
 a Transformer encoder, which models temporal dependencies between frames
 through self-attention. We deliberately do not introduce an input projection
 layer: the sketches are fed directly to the encoder, so that the model
-dimension equals the sketch dimension, $d_{\text{model}} = m$.
+dimension equals the sketch dimension, $d_{\text{model}} = m$. As a side
+effect, varying $m$ in the ablation study (Section~\ref{sec:ablation}) also
+varies the size of the Transformer.
 
 \paragraph{Positional encoding.}
 Self-attention is permutation-invariant: it would treat the $60$ frames as an
@@ -522,7 +524,7 @@ This encoding is computed once and kept fixed throughout training.
 Each encoder layer follows the standard
 Transformer~\cite{vaswani2017attention} design: a multi-head self-attention
 sublayer followed by a position-wise feed-forward network, each wrapped in a
-residual connection and layer normalization. The self-attention uses $h = 4$
+residual connection and layer normalization (post-norm). The self-attention uses $h = 4$
 heads; the feed-forward sublayer has a single hidden layer of width $2m$ with
 a GELU activation. Dropout with rate $p = 0.4$ is applied inside each sublayer.
 We stack $L = 3$ such layers.
@@ -542,6 +544,9 @@ comparable results without introducing an extra learned token.
 The architecture is governed by four hyperparameters: the model dimension
 $m = 256$, the number of encoder layers $L = 3$, the number of attention heads
 $h = 4$, and the dropout rate $p = 0.4$.
+
+The full architecture is summarized in
+Figure~\ref{fig:transformer-architecture} (Appendix~\ref{app:architecture}).
 
 
 \subsection{Training protocol}
@@ -606,7 +611,7 @@ PointNet~\cite{qi2017pointnet} is a fundamental model in radar deep learning.
 It was built to process an
 unordered set of 3D points with no pixel grid and no voxel ordering. In this project we use two
 variants. V1 is the original vanilla PointNet classifier, which we
-validated on the ModelNet40 3-D object benchmark from the original PointNet paper.
+validated on the ModelNet40 3D object benchmark from the original PointNet paper.
  V2 adds explicit temporal processing (over the sequence of frames) using 
  an attention mechanism, enabling each point from each frame to "talk" to itself
  across the time window.
@@ -652,7 +657,7 @@ Within a single frame,
 points are an unordered set and must be treated symmetrically; across frames,
 there is an insightful ordering, which carries information.
 V2 addresses this by stacking a temporal attention mechanism inside the PointNet
- encoder, right after the TNet rotation.
+encoder, right after the TNet rotation.
 
 For the attention mechanism, we use multi-head self-attention with 
 8 heads or less (depending on whether the dimension is large enough for 8 heads). 
@@ -931,6 +936,208 @@ architectures, it is easier to train and gives a clear interpretation of where
 attention is applied: first over points, then over time.
 
 %==============================================================
+%                     SKELETON CLASSIFIER
+%==============================================================
+\section{Skeleton classifier with dgcnn}
+\label{sec:skeleton-classifier}
+
+The SK-DGCNN approach used in the project follows a two-stage strategy:
+instead of classifying sparse radar points directly, it first maps each radar
+frame to a structured human skeleton and then classifies the resulting skeleton
+sequence. The motivation is to make the intermediate representation closer to
+human motion: a radar point cloud is noisy, sparse and unordered, whereas a
+skeleton has fixed joints, fixed semantics and a stable graph structure.
+
+\subsection{Radar-to-skeleton stage}
+
+The first stage is a skeleton-aware DGCNN regressor trained on MARS, where
+radar frames are synchronized with Kinect skeleton annotations. Each MARS radar
+frame is cropped or padded to 25 points and represented by five features:
+$x,y,z$, Doppler velocity and intensity. A dynamic $k$-nearest-neighbor graph
+is recomputed inside the network, and three EdgeConv blocks extract local
+geometric features. Efficient channel attention is added after each block so
+that the network can reweight the most informative channels before global
+pooling.
+
+The output is a centered 19-joint skeleton using the lateral and vertical
+coordinates $(x,z)$, giving 38 regression targets per frame. We center the
+skeleton around the \texttt{SpineShoulder} joint so that the regressor focuses
+on body pose rather than absolute position in the radar field of view.
+
+\subsection{Skeleton classification stage}
+
+Once the radar-to-skeleton checkpoint is trained, it can be used to transform
+radar recordings into skeleton sequences. In the repository this produces the
+SKradHAR representation: RadHAR windows are converted from raw radar point
+clouds into predicted 19-joint skeletons. The activity classifier then operates
+on this structured sequence rather than on the original point cloud. This
+separates the perception problem from the classification problem: the first
+network learns a radar-to-body representation, and the second network learns
+activity dynamics from body motion.
+
+This design is expected to help when the activity is better explained by joint
+configuration than by the raw distribution of radar reflections. Its main
+drawback is error propagation: if the skeleton regressor fails on a frame, the
+classifier only sees the incorrect skeleton and cannot recover the discarded
+radar evidence.
+
+%==============================================================
+%                    CLASSICAL BASELINES
+%==============================================================
+\section{Classical Baselines}
+
+In this section, we present the comparative performance of baseline models
+across the four radar datasets. The objective is to evaluate how far global
+statistical feature extraction can go as a lightweight alternative to more
+complex deep learning architectures. By establishing these baselines, we
+quantify the information gain provided by temporal dynamics and spatial
+geometric modeling.
+
+The evaluation protocol was applied consistently across datasets: each radar
+frame was compressed into a fixed-size vector of 30 statistical moments. We
+assessed several classical classifiers, ranging from linear models to ensemble
+tree-based methods and shallow multi-layer perceptrons.
+
+\subsection{Classical ML Performance on RadHAR}
+
+For the RadHAR dataset, which contains macroscopically distinct motions, we
+evaluated the classical models on a strict frame-by-frame basis, explicitly
+removing temporal context.
+
+\begin{table}[H]
+\centering
+\scriptsize
+\setlength{\tabcolsep}{3pt}
+\resizebox{\columnwidth}{!}{%
+\begin{tabular}{lcc}
+\toprule
+Model & Accuracy (\%) & Macro F1 (\%) \\
+\midrule
+Logistic Regression & 52.1 & 51.3 \\
+Linear SVM & 51.8 & 50.6 \\
+Random Forest & 72.9 & 72.5 \\
+XGBoost & 73.9 & 73.4 \\
+MLP baseline & 74.9 & 74.6 \\
+\bottomrule
+\end{tabular}
+}
+\caption{Performance of classical ML models on RadHAR, frame by frame.}
+\label{tab:radhar-classical-results}
+\end{table}
+
+The performance ceiling of approximately $75\%$ confirms that statistical
+extraction is efficient for distinct activities, but evaluating frames in
+isolation leaves a significant margin of error.
+
+\begin{figure}[H]
+    \centering
+    \IfFileExists{MATRICERADHAR.PNG}{%
+        \includegraphics[width=0.8\columnwidth]{MATRICERADHAR.PNG}%
+    }{%
+        \fbox{\parbox{0.8\columnwidth}{\centering Missing local file:
+        \texttt{MATRICERADHAR.PNG}}}%
+    }
+    \caption{Confusion matrix of the best classical ML classifier on RadHAR.}
+    \label{fig:cm-radhar}
+\end{figure}
+
+\subsection{Classical ML Performance on DGUHA}
+
+The DGUHA dataset introduces a higher level of complexity with seven subtle
+classes. Ensemble tree-based models perform best, with Random Forest reaching
+$71.4\%$ accuracy.
+
+\begin{table}[H]
+\centering
+\scriptsize
+\setlength{\tabcolsep}{3pt}
+\resizebox{\columnwidth}{!}{%
+\begin{tabular}{lcc}
+\toprule
+Model & Accuracy (\%) & Macro F1 (\%) \\
+\midrule
+Logistic Regression & 67.7 & 67.0 \\
+Linear SVM & 59.6 & 58.0 \\
+Random Forest & 71.4 & 69.9 \\
+XGBoost & 70.8 & 70.0 \\
+MLP baseline & 63.4 & 63.9 \\
+\bottomrule
+\end{tabular}
+}
+\caption{Performance of classical ML models on DGUHA.}
+\label{tab:dguha-classical-results}
+\end{table}
+
+Confusion between geometrically similar motions highlights the limits of global
+statistical summaries for fine-grained gestures.
+
+\begin{figure}[H]
+    \centering
+    \IfFileExists{MATRICEDGUHA.PNG}{%
+        \includegraphics[width=0.8\columnwidth]{MATRICEDGUHA.PNG}%
+    }{%
+        \fbox{\parbox{0.8\columnwidth}{\centering Missing local file:
+        \texttt{MATRICEDGUHA.PNG}}}%
+    }
+    \caption{Confusion matrix of the Random Forest classifier on DGUHA.}
+    \label{fig:cm-dguha}
+\end{figure}
+
+\subsection{The Generalization Bottleneck on MARS}
+
+MARS reveals the critical limitations of statistical approaches. Under a random
+split, XGBoost reaches $61.7\%$ accuracy, but the macro F1-score collapses to
+$23.8\%$, indicating a lazy-prediction trap.
+
+\begin{table}[H]
+\centering
+\scriptsize
+\setlength{\tabcolsep}{3pt}
+\resizebox{\columnwidth}{!}{%
+\begin{tabular}{lcc}
+\toprule
+Model & Accuracy (\%) & Macro F1 (\%) \\
+\midrule
+Logistic Regression & 40.3 & 15.3 \\
+Linear SVM & 37.0 & 14.5 \\
+Random Forest & 58.4 & 22.6 \\
+MLP baseline & 37.9 & 14.2 \\
+XGBoost & 61.7 & 23.8 \\
+\bottomrule
+\end{tabular}
+}
+\caption{Performance of classical ML models on MARS with a random split.}
+\label{tab:mars-classical-results}
+\end{table}
+
+Classical pipelines fail under subject-isolated evaluation because they overfit
+to physical attributes rather than geometric movement shapes. This spatial
+blindness motivates advanced spatial architectures such as DGCNN.
+
+\begin{figure}[H]
+    \centering
+    \IfFileExists{MATRICEMARSNOR.PNG}{%
+        \includegraphics[width=0.8\columnwidth]{MATRICEMARSNOR.PNG}%
+    }{%
+        \fbox{\parbox{0.8\columnwidth}{\centering Missing local file:
+        \texttt{MATRICEMARSNOR.PNG}}}%
+    }
+    \caption{Confusion matrix on MARS with Random Forest, exposing predictive
+    collapse.}
+    \label{fig:cm-mars}
+\end{figure}
+
+\subsection{Summary}
+
+The progression is clear: coarse macro-motions such as RadHAR can be partly
+solved with statistical moments, fine-grained actions such as DGUHA require
+non-linear ensemble methods, and symmetrical cross-subject motions such as MARS
+demand local 3D structural modeling. These results confirm that architectural
+complexity is a functional requirement for robust human activity recognition,
+not merely an optimization.
+
+
+%==============================================================
 %                          MOMENTS
 %==============================================================
 \section{Moments}
@@ -1087,208 +1294,6 @@ the sequential architectures described in
 Section~\ref{sec:sketching-transformer}.
 
 %==============================================================
-%                     SKELETON CLASSIFIER
-%==============================================================
-\section{Skeleton classifier with dgcnn}
-\label{sec:skeleton-classifier}
-
-The SK-DGCNN approach used in the project follows a two-stage strategy:
-instead of classifying sparse radar points directly, it first maps each radar
-frame to a structured human skeleton and then classifies the resulting skeleton
-sequence. The motivation is to make the intermediate representation closer to
-human motion: a radar point cloud is noisy, sparse and unordered, whereas a
-skeleton has fixed joints, fixed semantics and a stable graph structure.
-
-\subsection{Radar-to-skeleton stage}
-
-The first stage is a skeleton-aware DGCNN regressor trained on MARS, where
-radar frames are synchronized with Kinect skeleton annotations. Each MARS radar
-frame is cropped or padded to 25 points and represented by five features:
-$x,y,z$, Doppler velocity and intensity. A dynamic $k$-nearest-neighbor graph
-is recomputed inside the network, and three EdgeConv blocks extract local
-geometric features. Efficient channel attention is added after each block so
-that the network can reweight the most informative channels before global
-pooling.
-
-The output is a centered 19-joint skeleton using the lateral and vertical
-coordinates $(x,z)$, giving 38 regression targets per frame. We center the
-skeleton around the \texttt{SpineShoulder} joint so that the regressor focuses
-on body pose rather than absolute position in the radar field of view.
-
-\subsection{Skeleton classification stage}
-
-Once the radar-to-skeleton checkpoint is trained, it can be used to transform
-radar recordings into skeleton sequences. In the repository this produces the
-SKradHAR representation: RadHAR windows are converted from raw radar point
-clouds into predicted 19-joint skeletons. The activity classifier then operates
-on this structured sequence rather than on the original point cloud. This
-separates the perception problem from the classification problem: the first
-network learns a radar-to-body representation, and the second network learns
-activity dynamics from body motion.
-
-This design is expected to help when the activity is better explained by joint
-configuration than by the raw distribution of radar reflections. Its main
-drawback is error propagation: if the skeleton regressor fails on a frame, the
-classifier only sees the incorrect skeleton and cannot recover the discarded
-radar evidence.
-
-%==============================================================
-%                      SIMPLE APPROACHES
-%==============================================================
-\section{Simple approaches}
-
-In this section, we present the comparative performance of baseline models
-across the four radar datasets. The objective is to evaluate how far global
-statistical feature extraction can go as a lightweight alternative to more
-complex deep learning architectures. By establishing these baselines, we
-quantify the information gain provided by temporal dynamics and spatial
-geometric modeling.
-
-The evaluation protocol was applied consistently across datasets: each radar
-frame was compressed into a fixed-size vector of 30 statistical moments. We
-assessed several classical classifiers, ranging from linear models to ensemble
-tree-based methods and shallow multi-layer perceptrons.
-
-\subsection{Classical ML Performance on RadHAR}
-
-For the RadHAR dataset, which contains macroscopically distinct motions, we
-evaluated the classical models on a strict frame-by-frame basis, explicitly
-removing temporal context.
-
-\begin{table}[H]
-\centering
-\scriptsize
-\setlength{\tabcolsep}{3pt}
-\resizebox{\columnwidth}{!}{%
-\begin{tabular}{lcc}
-\toprule
-Model & Accuracy (\%) & Macro F1 (\%) \\
-\midrule
-Logistic Regression & 52.1 & 51.3 \\
-Linear SVM & 51.8 & 50.6 \\
-Random Forest & 72.9 & 72.5 \\
-XGBoost & 73.9 & 73.4 \\
-MLP baseline & 74.9 & 74.6 \\
-\bottomrule
-\end{tabular}
-}
-\caption{Performance of classical ML models on RadHAR, frame by frame.}
-\label{tab:radhar-classical-results}
-\end{table}
-
-The performance ceiling of approximately $75\%$ confirms that statistical
-extraction is efficient for distinct activities, but evaluating frames in
-isolation leaves a significant margin of error.
-
-\begin{figure}[H]
-    \centering
-    \IfFileExists{MATRICERADHAR.PNG}{%
-        \includegraphics[width=0.8\columnwidth]{MATRICERADHAR.PNG}%
-    }{%
-        \fbox{\parbox{0.8\columnwidth}{\centering Missing local file:
-        \texttt{MATRICERADHAR.PNG}}}%
-    }
-    \caption{Confusion matrix of the best classical ML classifier on RadHAR.}
-    \label{fig:cm-radhar}
-\end{figure}
-
-\subsection{Classical ML Performance on DGUHA}
-
-The DGUHA dataset introduces a higher level of complexity with seven subtle
-classes. Ensemble tree-based models perform best, with Random Forest reaching
-$71.4\%$ accuracy.
-
-\begin{table}[H]
-\centering
-\scriptsize
-\setlength{\tabcolsep}{3pt}
-\resizebox{\columnwidth}{!}{%
-\begin{tabular}{lcc}
-\toprule
-Model & Accuracy (\%) & Macro F1 (\%) \\
-\midrule
-Logistic Regression & 67.7 & 67.0 \\
-Linear SVM & 59.6 & 58.0 \\
-Random Forest & 71.4 & 69.9 \\
-XGBoost & 70.8 & 70.0 \\
-MLP baseline & 63.4 & 63.9 \\
-\bottomrule
-\end{tabular}
-}
-\caption{Performance of classical ML models on DGUHA.}
-\label{tab:dguha-classical-results}
-\end{table}
-
-Confusion between geometrically similar motions highlights the limits of global
-statistical summaries for fine-grained gestures.
-
-\begin{figure}[H]
-    \centering
-    \IfFileExists{MATRICEDGUHA.PNG}{%
-        \includegraphics[width=0.8\columnwidth]{MATRICEDGUHA.PNG}%
-    }{%
-        \fbox{\parbox{0.8\columnwidth}{\centering Missing local file:
-        \texttt{MATRICEDGUHA.PNG}}}%
-    }
-    \caption{Confusion matrix of the Random Forest classifier on DGUHA.}
-    \label{fig:cm-dguha}
-\end{figure}
-
-\subsection{The Generalization Bottleneck on MARS}
-
-MARS reveals the critical limitations of statistical approaches. Under a random
-split, XGBoost reaches $61.7\%$ accuracy, but the macro F1-score collapses to
-$23.8\%$, indicating a lazy-prediction trap.
-
-\begin{table}[H]
-\centering
-\scriptsize
-\setlength{\tabcolsep}{3pt}
-\resizebox{\columnwidth}{!}{%
-\begin{tabular}{lcc}
-\toprule
-Model & Accuracy (\%) & Macro F1 (\%) \\
-\midrule
-Logistic Regression & 40.3 & 15.3 \\
-Linear SVM & 37.0 & 14.5 \\
-Random Forest & 58.4 & 22.6 \\
-MLP baseline & 37.9 & 14.2 \\
-XGBoost & 61.7 & 23.8 \\
-\bottomrule
-\end{tabular}
-}
-\caption{Performance of classical ML models on MARS with a random split.}
-\label{tab:mars-classical-results}
-\end{table}
-
-Classical pipelines fail under subject-isolated evaluation because they overfit
-to physical attributes rather than geometric movement shapes. This spatial
-blindness motivates advanced spatial architectures such as DGCNN.
-
-\begin{figure}[H]
-    \centering
-    \IfFileExists{MATRICEMARSNOR.PNG}{%
-        \includegraphics[width=0.8\columnwidth]{MATRICEMARSNOR.PNG}%
-    }{%
-        \fbox{\parbox{0.8\columnwidth}{\centering Missing local file:
-        \texttt{MATRICEMARSNOR.PNG}}}%
-    }
-    \caption{Confusion matrix on MARS with Random Forest, exposing predictive
-    collapse.}
-    \label{fig:cm-mars}
-\end{figure}
-
-\subsection{Summary}
-
-The progression is clear: simple macro-motions such as RadHAR can be partly
-solved with statistical moments, fine-grained actions such as DGUHA require
-non-linear ensemble methods, and symmetrical cross-subject motions such as MARS
-demand local 3D structural modeling. These results confirm that architectural
-complexity is a functional requirement for robust human activity recognition,
-not merely an optimization.
-
-
-%==============================================================
 %                          RESULTS
 %==============================================================
 \section{Results}
@@ -1301,7 +1306,7 @@ main experiments.
 \subsection{Discussion}
 
 \paragraph{RadHAR near-ceiling performance and its caveat.}
-PointNet V1 and V2 both reach 96.4\% on RadHAR, and DGCNN reaches 95.9\%.
+PointNet V1 and V2 both reach about 96.4\% on RadHAR.
 These numbers look strong but should be interpreted carefully: RadHAR was
 recorded by only two subjects, so a classifier can achieve high accuracy
 by recognizing body-shape or gait signatures that are specific to those
@@ -1329,13 +1334,11 @@ training set (3 subjects, 383 windows) may simply not be large enough to
 take advantage of temporal modeling. It also highlights that architectural
 complexity is not always beneficial in low-data regimes.
 
-\paragraph{Edge features help on larger action sets.}
-On DGUHA (7 classes), the ranking is DGCNN (95.0\%) $>$ PointNet V2 (94.4\%)
-$>$ PointNet V1 (92.6\%). The advantage of DGCNN's edge-convolution
-operators grows with the number of classes, consistent with the intuition
-that fine-grained local geometry --- the relative position and velocity
-of neighboring points --- matters more when distinctions between actions
-are subtle.
+\paragraph{PointNet V2 helps on DGUHA.}
+On DGUHA (7 classes), PointNet V2 averages 92.8\% accuracy across five seeds,
+compared with 91.9\% for PointNet V1. The temporal attention layer therefore
+provides a modest gain on this longer-window dataset, where motion dynamics are
+more informative than in shorter binary settings.
 
 \paragraph{The Moments MLP gap quantifies the value of temporal context.}
 The moment-based MLP reaches only 58.6\% on RadHAR, a gap of $\sim\!38$
@@ -1357,29 +1360,44 @@ architectures rather than frame-independent baselines.
 \toprule
 Dataset & Architecture & Params & Epochs & Test acc. & Test macro F1 \\
 \midrule
-RadHAR & PointNet V1 & 3,341,909 & 40 & 0.9639 & 0.9651 \\
-RadHAR & PointNet V2 & 3,358,357 & 40 & 0.9639 & 0.9648 \\
-RadHAR & SK-DGCNN & 1,081,093 & 200 & 0.8877 & 0.8879 \\
-RadHAR & Moments MLP & 14,469 & \missing & 0.5860 & 0.5120 \\
-RadHAR & Sketching Transformer & 791,000 & 30 & 0.9640 & \missing \\
+RadHAR & Linear SVM & \missing & \missing & 0.5180 & 0.5060 \\
+ & Logistic Regression & \missing & \missing & 0.5210 & 0.5130 \\
+ & Moments MLP & 14,469 & \missing & 0.5860 & 0.5120 \\
+ & Random Forest & \missing & \missing & 0.7290 & 0.7250 \\
+ & XGBoost & \missing & \missing & 0.7390 & 0.7340 \\
+ & MLP baseline & \missing & \missing & 0.7490 & 0.7460 \\
+ & SK-DGCNN & 1,081,093 & 200 & 0.8877 & 0.8879 \\
+ & PointNet V1 & 3,341,909 & 40 & 0.9639 & 0.9651 \\
+ & PointNet V2 & 3,358,357 & 40 & 0.9639 & 0.9648 \\
+ & Sketching Transformer & 791,000 & 30 & 0.9640 & \missing \\
 \midrule
-RaDataTouille & PointNet V1 & 3,345,766 & \missing & 0.8257 & 0.8203 \\
 RaDataTouille & PointNet V2 & 3,362,294 & \missing & 0.8017 & 0.7998 \\
-RaDataTouille & SK-DGCNN & \missing & \missing & \missing & \missing \\
-RaDataTouille & Moments MLP & \missing & \missing & \missing & \missing \\
-RaDataTouille & Sketching Transformer & \missing & \missing & \missing & \missing \\
+ & PointNet V1 & 3,345,766 & \missing & 0.8257 & 0.8203 \\
+ & SK-DGCNN & \missing & \missing & \missing & \missing \\
+ & Moments MLP & \missing & \missing & \missing & \missing \\
+ & Sketching Transformer & \missing & \missing & \missing & \missing \\
 \midrule
-DGUHA & PointNet V1 & 3,341,008 & \missing & 0.9255 & 0.9263 \\
-DGUHA & PointNet V2 & 3,357,428 & \missing & 0.9441 & 0.9449 \\
-DGUHA & SK-DGCNN & 1,935,886 & \missing & \missing & \missing \\
-DGUHA & Moments MLP & \missing & \missing & \missing & \missing \\
-DGUHA & Sketching Transformer & \missing & \missing & \missing & \missing \\
+DGUHA & Linear SVM & \missing & \missing & 0.5960 & 0.5800 \\
+ & MLP baseline & \missing & \missing & 0.6340 & 0.6390 \\
+ & Logistic Regression & \missing & \missing & 0.6770 & 0.6700 \\
+ & XGBoost & \missing & \missing & 0.7080 & 0.7000 \\
+ & Random Forest & \missing & \missing & 0.7140 & 0.6990 \\
+ & PointNet V1 & 3,341,008 & \missing & 0.9193 & 0.9205 \\
+ & PointNet V2 & 3,357,428 & \missing & 0.9279 & 0.9274 \\
+ & SK-DGCNN & 1,935,886 & \missing & \missing & \missing \\
+ & Moments MLP & \missing & \missing & \missing & \missing \\
+ & Sketching Transformer & \missing & \missing & \missing & \missing \\
 \midrule
-MARS & PointNet V1 & 3,346,915 & \missing & 0.8934 & 0.7862 \\
-MARS & PointNet V2 & 3,363,399 & \missing & 0.8607 & 0.7609 \\
-MARS & SK-DGCNN & 1,933,454 & \missing & \missing & \missing \\
-MARS & Moments MLP & \missing & \missing & \missing & \missing \\
-MARS & Sketching Transformer & \missing & \missing & \missing & \missing \\
+MARS & Linear SVM & \missing & \missing & 0.3700 & 0.1450 \\
+ & MLP baseline & \missing & \missing & 0.3790 & 0.1420 \\
+ & Logistic Regression & \missing & \missing & 0.4030 & 0.1530 \\
+ & Random Forest & \missing & \missing & 0.5840 & 0.2260 \\
+ & XGBoost & \missing & \missing & 0.6170 & 0.2380 \\
+ & PointNet V2 & 3,363,399 & \missing & 0.8607 & 0.7609 \\
+ & PointNet V1 & 3,346,915 & \missing & 0.8934 & 0.7862 \\
+ & SK-DGCNN & 1,933,454 & \missing & \missing & \missing \\
+ & Moments MLP & \missing & \missing & \missing & \missing \\
+ & Sketching Transformer & \missing & \missing & \missing & \missing \\
 \bottomrule
 \end{tabular}
 }
@@ -1401,12 +1419,12 @@ MARS & Sketching Transformer & \missing & \missing & \missing & \missing \\
 \subsection{Transformer architecture diagram}
 \label{app:architecture}
 
-\begin{figure*}[H]
+\begin{figure}[H]
     \centering
     \IfFileExists{transformer_architecture.png}{%
-        \includegraphics[width=0.6\textwidth]{transformer_architecture.png}%
+        \includegraphics[width=\columnwidth]{transformer_architecture.png}%
     }{%
-        \fbox{\parbox{0.6\textwidth}{\centering Missing local file:
+        \fbox{\parbox{0.8\columnwidth}{\centering Missing local file:
         \texttt{transformer\_architecture.png}}}%
     }
     \caption{Architecture of our Transformer encoder for RadHAR
@@ -1416,7 +1434,7 @@ MARS & Sketching Transformer & \missing & \missing & \missing & \missing \\
     $h = 4$ attention heads and a feed-forward expansion ratio of $2$,
     temporally pooled, and classified into the $5$ activity classes.}
     \label{fig:transformer-architecture}
-\end{figure*}
+\end{figure}
 
 \subsection{PointNet V1 architecture and hyperparameters}
 

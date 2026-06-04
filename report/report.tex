@@ -782,6 +782,29 @@ Seed & Acc. & F1 & Acc. & F1 \\
 \label{tab:pointnet-radatatouille}
 \end{table}
 
+\begin{table}[H]
+\centering
+\scriptsize
+\setlength{\tabcolsep}{3pt}
+\begin{tabular}{lcccc}
+\toprule
+ & \multicolumn{2}{c}{V1} & \multicolumn{2}{c}{V2} \\
+\cmidrule(lr){2-3}\cmidrule(lr){4-5}
+Seed & Acc. & F1 & Acc. & F1 \\
+\midrule
+1234 & 0.8917 & 0.7891 & 0.8689 & 0.7718 \\
+1235 & 0.8958 & 0.7928 & 0.7951 & 0.7103 \\
+1236 & 0.8792 & 0.7777 & 0.9016 & 0.8000 \\
+1237 & 0.8833 & 0.7837 & 0.8115 & 0.7224 \\
+1238 & 0.9000 & 0.7964 & 0.8525 & 0.7573 \\
+\midrule
+\textbf{Mean} & \textbf{0.8900} & \textbf{0.7900} & \textbf{0.8455} & \textbf{0.7524} \\
+\bottomrule
+\end{tabular}
+\caption{PointNet V1 vs.\ V2 on MARS}
+\label{tab:pointnet-mars}
+\end{table}
+
 \paragraph{DGUHA.}
 V2 outperforms V1 by $+0.86$ pp in accuracy and $+0.69$ pp in macro F1 on average.
 The gain is consistent across seeds 1234, 1235, and 1237; seed 1236 is a weak run for
@@ -795,6 +818,16 @@ The binary sit/stand task is small and the recordings are short ($20$-frame wind
 little temporal structure for the attention mechanism to leverage. In this low-data regime,
 the extra parameters of V2 appear to hurt rather than help, consistent with the MARS
 observation in Section~\ref{sec:results}.
+
+\paragraph{MARS.}
+V1 is also stronger on MARS, averaging $89.0\%$ accuracy and $0.7900$ macro F1,
+compared with $84.6\%$ accuracy and $0.7524$ macro F1 for V2. The validation
+accuracies are close to perfect for both variants, while test macro F1 remains
+lower because both models fail to recognize the left and right limb extension
+classes in the subject-isolated test set. This gap suggests that MARS is not
+only an optimization problem, but also a generalization problem: the models fit
+the training subjects well, yet struggle when the same rehabilitation gestures
+are performed by an unseen subject.
 
 
 
@@ -966,7 +999,7 @@ attention is applied: first over points, then over time.
 \label{sec:skeleton-classifier}
 \sectionauthor{Eloan Tourtelier}
 
-The SK-DGCNN approach follows a sequential two-stage strategy inspired by the
+The SK-DGCNN approach follows a sequential two-stage strategy implemneted from the
 SK-DGCNN method~\cite{zhang2026skdgcnn}:
 instead of classifying sparse radar points directly, it first maps each radar
 frame to a structured human skeleton and then classifies the resulting skeleton. 
@@ -981,9 +1014,7 @@ The first stage is a skeleton-aware DGCNN regressor trained on MARS~\cite{an2021
 very strong model, which was built as a generalization of PointNet~\cite{qi2017pointnet} by introducing
 spatial neighborhoods using graphs~\cite{wang2019dgcnn}. In MARS, radar frames are synchronized with Kinect
 skeleton annotations, which record the real skeleton positions.
-Each MARS radar
-frame is cropped or padded to 25 points and represented by five features:
-$x,y,z$, Doppler velocity and intensity. A dynamic $k$-nearest-neighbor graph
+A dynamic $k$-nearest-neighbor graph
 is recomputed inside the network, and three EdgeConv blocks extract local
 geometric features. Efficient channel attention is added after each block so
 that the network can reweight the most informative channels before global
@@ -994,13 +1025,21 @@ coordinates $(x,z)$, giving 38 regression targets per frame. We center the
 skeleton around the \texttt{SpineShoulder} joint so that the regressor focuses
 on body pose rather than absolute position in the radar field of view.
 The architecture and training hyperparameters for this stage are summarized in
-Appendix Table~\ref{tab:appendix-skdgcnn}.
+Appendix Table~\ref{tab:appendix-skdgcnn}. This regression part is the hardest in the sequence
+and requires a very compute intensive training (200 epochs).
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\columnwidth]{images/skeleton_example.png}
+    \caption{Example of a radar frame converted into a centered 19-joint
+    skeleton representation.}
+    \label{fig:skeleton-example}
+\end{figure}
 
 \subsection{Skeleton classification stage}
 
 Once the radar-to-skeleton checkpoint is trained, it can be used to transform
-radar recordings into skeleton sequences. In the repository this produces the
-SKradHAR representation: RadHAR windows are converted from raw radar point
+radar recordings into skeleton sequences. Datasets windows are converted from raw radar point
 clouds into predicted 19-joint skeletons. The activity classifier then operates
 on this structured sequence rather than on the original point cloud. This
 separates the perception problem from the classification problem: the first
@@ -1012,6 +1051,89 @@ configuration than by the raw distribution of radar reflections. Its main
 drawback is error propagation: if the skeleton regressor fails on a frame, the
 classifier only sees the incorrect skeleton and cannot recover the discarded
 radar evidence.
+
+
+\subsection{Data Processing}
+\label{sec:skeleton-data-processing}
+
+\paragraph{Radar-to-skeleton preprocessing.}
+For the pose-estimation stage, each MARS radar frame is matched with its
+synchronized Kinect annotation. Radar frames are cropped or padded to 25 points,
+using the five MARS radar features $x,y,z$, Doppler velocity and intensity. The
+Kinect target is reduced to the 19-joint contract used by SK-DGCNN and to the
+two coordinates $(x,z)$, corresponding to lateral and vertical motion. The
+Kinect lateral axis is inverted to align it with the radar coordinate frame, and
+the skeleton is centered on \texttt{SpineShoulder}.
+
+\paragraph{Skeleton cache generation.}
+After training the pose regressor on MARS, the checkpoint is applied to RadHAR
+recordings to build the SKradHAR cache. Each radar frame is converted into a
+predicted 19-joint skeleton. The resulting representation keeps only body
+motion and discards the original radar points, producing sequences of centered
+lateral and vertical joint coordinates.
+
+\paragraph{Windowing and normalization.}
+The classifier uses fixed-length skeleton windows from the cached sequences.
+Before classification, every skeleton is centered again around
+\texttt{SpineShoulder}. Training-set statistics are then used to standardize the
+lateral and vertical coordinates, and the same statistics are reused at
+validation and test time. A constant confidence channel is concatenated to the
+two coordinate channels, so the ST-GCN++ input has three channels over time and
+over the 19-joint skeleton graph.
+
+\paragraph{Augmentation.}
+During classifier training only, small Gaussian jitter is added to the centered
+skeleton coordinates. The skeleton is re-centered after jittering so that the
+augmentation changes pose and local motion slightly without shifting the whole
+body in the coordinate frame.
+
+\subsection{Results}
+\label{sec:skeleton-results}
+
+The skeleton pipeline is evaluated in two parts: first as a radar-to-skeleton
+regressor on MARS, then as a full skeleton-based activity classifier on RadHAR.
+The pose stage reaches a mean absolute error of about $5$ cm on the MARS test
+set. Central torso joints are reconstructed most accurately, while wrists and
+feet have larger errors because they move farther from the body center and are
+harder to infer from sparse radar reflections.
+
+\begin{table}[H]
+\centering
+\scriptsize
+\setlength{\tabcolsep}{3pt}
+\begin{tabular}{lcc}
+\toprule
+Evaluation & Metric & Value \\
+\midrule
+MARS pose regressor & Overall MAE & 5.0456 cm \\
+Best joint & \texttt{SpineShoulder} MAE & 0.0645 cm \\
+Worst joint & \texttt{WristRight} MAE & 9.7054 cm \\
+\bottomrule
+\end{tabular}
+\caption{SK-DGCNN radar-to-skeleton regression results on MARS.}
+\label{tab:skdgcnn-pose-results}
+\end{table}
+
+\begin{table}[H]
+\centering
+\scriptsize
+\setlength{\tabcolsep}{3pt}
+\begin{tabular}{lccc}
+\toprule
+Dataset & Validation acc. & Test acc. & Test macro F1 \\
+\midrule
+RadHAR / SKradHAR & 0.9294 & 0.8877 & 0.8879 \\
+\bottomrule
+\end{tabular}
+\caption{Skeleton-based ST-GCN++ classification on predicted RadHAR skeletons.}
+\label{tab:skdgcnn-classification-results}
+\end{table}
+
+The downstream classifier performs well, but remains below the best direct
+PointNet variants on RadHAR. This confirms both the benefit and the cost of the
+two-stage design: the skeleton representation gives the classifier a clean body
+motion graph, but any pose-estimation mistake is already baked into the input
+seen by ST-GCN++.
 
 %==============================================================
 %                    CLASSICAL BASELINES
@@ -1359,8 +1481,8 @@ spatial signature, so modeling how the cloud evolves over time provides
 diminishing returns on a saturated problem.
 
 \paragraph{Vanilla PointNet outperforms the temporal variant on MARS.}
-On the harder, subject-isolated MARS benchmark, V1 (89.3\%, macro F1 0.786)
-actually outperforms V2 (86.1\%, macro F1 0.761). This reversal is
+On the harder, subject-isolated MARS benchmark, V1 (89.0\%, macro F1 0.790)
+actually outperforms V2 (84.6\%, macro F1 0.752). This reversal is
 counterintuitive and suggests a training-efficiency issue: V2's additional
 attention parameters require more data to optimize reliably, and the MARS
 training set (3 subjects, 383 windows) may simply not be large enough to
@@ -1426,8 +1548,8 @@ MARS & Linear SVM & \missing & \missing & 0.3700 & 0.1450 \\
  & Logistic Regression & \missing & \missing & 0.4030 & 0.1530 \\
  & Random Forest & \missing & \missing & 0.5840 & 0.2260 \\
  & XGBoost & \missing & \missing & 0.6170 & 0.2380 \\
- & PointNet V2 & 3,363,399 & \missing & 0.8607 & 0.7609 \\
- & PointNet V1 & 3,346,915 & \missing & 0.8934 & 0.7862 \\
+ & PointNet V2 & 3,363,399 & \missing & 0.8455 & 0.7524 \\
+ & PointNet V1 & 3,346,915 & \missing & 0.8900 & 0.7900 \\
  & SK-DGCNN & 1,933,454 & \missing & \missing & \missing \\
  & Moments MLP & \missing & \missing & \missing & \missing \\
  & Sketching Transformer & \missing & \missing & \missing & \missing \\

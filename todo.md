@@ -179,3 +179,86 @@ Validation accuracy: 0.9958
 Test macro F1: 0.8222
 Test accuracy: 0.8274
 {'sit': 0.8526570200920105, 'stand_up': 0.7918089032173157}
+
+
+# MARS / pointnetV1
+SEED = 1234
+MARS/ pointnet V1
+Best validation checkpoint: checkpoint_37.pt
+Validation accuracy: 1.0000
+Test macro F1: 0.7891
+Test accuracy: 0.8917
+{'Left_upper_limb_extension': 1.0, 'Right_upper_limb_extension': 1.0, 'Both_upper_limb_extension': 0.9811320900917053, 'Left_front_lunge': 0.9811320900917053, 'Right_front_lunge': 1.0, 'Squad': 0.9824561476707458, 'Left_side_lunge': 0.9642857313156128, 'Right_side_lunge': 0.9824561476707458, 'Left_limb_extension': 0.0, 'Right_limb_extension': 0.0}
+
+SEED = 1235
+MARS/ pointnet V1
+Best validation checkpoint: checkpoint_37.pt
+Validation accuracy: 1.0000
+Test macro F1: 0.7928
+Test accuracy: 0.8958
+{'Left_upper_limb_extension': 1.0, 'Right_upper_limb_extension': 1.0, 'Both_upper_limb_extension': 1.0, 'Left_front_lunge': 0.9811320900917053, 'Right_front_lunge': 1.0, 'Squad': 0.9818181991577148, 'Left_side_lunge': 1.0, 'Right_side_lunge': 0.9655172228813171, 'Left_limb_extension': 0.0, 'Right_limb_extension': 0.0}
+
+SEED = 1236
+MARS/ pointnet V1
+Best validation checkpoint: checkpoint_39.pt
+Validation accuracy: 1.0000
+Test macro F1: 0.7777
+Test accuracy: 0.8792
+{'Left_upper_limb_extension': 1.0, 'Right_upper_limb_extension': 0.936170220375061, 'Both_upper_limb_extension': 1.0, 'Left_front_lunge': 1.0, 'Right_front_lunge': 1.0, 'Squad': 0.9491525292396545, 'Left_side_lunge': 0.9090909361839294, 'Right_side_lunge': 0.9824561476707458, 'Left_limb_extension': 0.0, 'Right_limb_extension': 0.0}
+
+SEED = 1237
+MARS/ pointnet V1
+Best validation checkpoint: checkpoint_39.pt
+Validation accuracy: 0.9964
+Test macro F1: 0.7837
+Test accuracy: 0.8833
+{'Left_upper_limb_extension': 1.0, 'Right_upper_limb_extension': 1.0, 'Both_upper_limb_extension': 0.9811320900917053, 'Left_front_lunge': 0.9811320900917053, 'Right_front_lunge': 1.0, 'Squad': 0.9491525292396545, 'Left_side_lunge': 0.9259259104728699, 'Right_side_lunge': 1.0, 'Left_limb_extension': 0.0, 'Right_limb_extension': 0.0}
+
+SEED = 1238
+MARS/ pointnet V1
+Best validation checkpoint: checkpoint_39.pt
+Validation accuracy: 1.0000
+Test macro F1: 0.7964
+Test accuracy: 0.9000
+{'Left_upper_limb_extension': 1.0, 'Right_upper_limb_extension': 1.0, 'Both_upper_limb_extension': 1.0, 'Left_front_lunge': 0.9811320900917053, 'Right_front_lunge': 1.0, 'Squad': 1.0, 'Left_side_lunge': 1.0, 'Right_side_lunge': 0.9824561476707458, 'Left_limb_extension': 0.0, 'Right_limb_extension': 0.0}
+
+# MARS / pointnetV2
+SEED = 1234
+MARS/ pointnet V2
+Best validation checkpoint: checkpoint_34.pt
+Validation accuracy: 0.9929
+Test macro F1: 0.7718
+Test accuracy: 0.8689
+{'Left_upper_limb_extension': 1.0, 'Right_upper_limb_extension': 1.0, 'Both_upper_limb_extension': 0.9230769276618958, 'Left_front_lunge': 1.0, 'Right_front_lunge': 1.0, 'Squad': 0.9285714030265808, 'Left_side_lunge': 0.9629629850387573, 'Right_side_lunge': 0.9032257795333862, 'Left_limb_extension': 0.0, 'Right_limb_extension': 0.0}
+
+SEED = 1235
+MARS/ pointnet V2
+Best validation checkpoint: checkpoint_39.pt
+Validation accuracy: 0.9929
+Test macro F1: 0.7103
+Test accuracy: 0.7951
+{'Left_upper_limb_extension': 1.0, 'Right_upper_limb_extension': 1.0, 'Both_upper_limb_extension': 0.7272727489471436, 'Left_front_lunge': 0.9629629850387573, 'Right_front_lunge': 1.0, 'Squad': 0.800000011920929, 'Left_side_lunge': 0.6842105388641357, 'Right_side_lunge': 0.9285714030265808, 'Left_limb_extension': 0.0, 'Right_limb_extension': 0.0}
+
+SEED = 1236
+MARS/ pointnet V2
+Best validation checkpoint: checkpoint_36.pt
+Validation accuracy: 1.0000
+Test macro F1: 0.8000
+Test accuracy: 0.9016
+{'Left_upper_limb_extension': 1.0, 'Right_upper_limb_extension': 1.0, 'Both_upper_limb_extension': 1.0, 'Left_front_lunge': 1.0, 'Right_front_lunge': 1.0, 'Squad': 1.0, 'Left_side_lunge': 1.0, 'Right_side_lunge': 1.0, 'Left_limb_extension': 0.0, 'Right_limb_extension': 0.0}
+
+SEED = 1237
+MARS/ pointnet V2
+Best validation checkpoint: checkpoint_37.pt
+Validation accuracy: 1.0000
+Test macro F1: 0.7224
+Test accuracy: 0.8115
+{'Left_upper_limb_extension': 1.0, 'Right_upper_limb_extension': 1.0, 'Both_upper_limb_extension': 0.7272727489471436, 'Left_front_lunge': 0.9333333373069763, 'Right_front_lunge': 1.0, 'Squad': 0.8333333134651184, 'Left_side_lunge': 0.7647058963775635, 'Right_side_lunge': 0.9655172228813171, 'Left_limb_extension': 0.0, 'Right_limb_extension': 0.0}
+
+SEED = 1238
+MARS/ pointnet V2
+Best validation checkpoint: checkpoint_30.pt
+Validation accuracy: 0.9857
+Test macro F1: 0.7573
+Test accuracy: 0.8525
+{'Left_upper_limb_extension': 1.0, 'Right_upper_limb_extension': 1.0, 'Both_upper_limb_extension': 0.9230769276618958, 'Left_front_lunge': 1.0, 'Right_front_lunge': 1.0, 'Squad': 0.8799999952316284, 'Left_side_lunge': 0.9032257795333862, 'Right_side_lunge': 0.8666666746139526, 'Left_limb_extension': 0.0, 'Right_limb_extension': 0.0}

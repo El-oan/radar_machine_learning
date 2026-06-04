@@ -19,6 +19,8 @@ datasets/ModelNet40/*
 datasets/DGUHA/*
 datasets/SKradHAR/Test
 datasets/SKradHAR/Train
+datasets/SKDGUHA/Train
+datasets/SKDGUHA/Test
 
 
 # Checkpoints

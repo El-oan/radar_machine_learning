@@ -1,0 +1,149 @@
+{
+  "pose_checkpoint": "datasets/SKDGUHA/checkpoint_133.pt",
+  "mtime_ns": 1779800557689805910,
+  "radar_axis_mapping": {
+    "MARS x (lateral)": "DGUHA y (lateral)",
+    "MARS y (depth)": "DGUHA x (depth)",
+    "MARS z (vertical)": "DGUHA z (vertical)"
+  },
+  "radar_spatial_crop": {
+    "x": [
+      -1.0,
+      1.0
+    ],
+    "y": [
+      0.0,
+      3.0
+    ],
+    "z": [
+      -1.0,
+      1.0
+    ]
+  },
+  "radar_frame_alignment": "translate spatial centroid to MARS training mean",
+  "clipping": 4.0,
+  "joint_names": [
+    "SpineBase",
+    "SpineMid",
+    "Neck",
+    "Head",
+    "ShoulderLeft",
+    "ElbowLeft",
+    "WristLeft",
+    "ShoulderRight",
+    "ElbowRight",
+    "WristRight",
+    "HipLeft",
+    "KneeLeft",
+    "AnkleLeft",
+    "FootLeft",
+    "HipRight",
+    "KneeRight",
+    "AnkleRight",
+    "FootRight",
+    "SpineShoulder"
+  ],
+  "coordinates": [
+    "x (lateral)",
+    "z (vertical)"
+  ],
+  "center_joint": "SpineShoulder",
+  "activity_class_names": [
+    "running",
+    "jumping",
+    "sitting_down_and_standing_up",
+    "both_upper_limb_extension",
+    "falling_forward",
+    "right_limb_extension",
+    "left_limb_extension"
+  ],
+  "mars_train_mae_cm": 2.9636878967285156,
+  "mars_train_joint_mae_cm": {
+    "SpineBase": 1.232799768447876,
+    "SpineMid": 0.5437830686569214,
+    "Neck": 0.3837442994117737,
+    "Head": 0.9922459721565247,
+    "ShoulderLeft": 0.9039871692657471,
+    "ElbowLeft": 3.6158549785614014,
+    "WristLeft": 6.72009801864624,
+    "ShoulderRight": 0.8242326974868774,
+    "ElbowRight": 3.666846752166748,
+    "WristRight": 7.114578723907471,
+    "HipLeft": 1.3179597854614258,
+    "KneeLeft": 3.3952813148498535,
+    "AnkleLeft": 5.093238830566406,
+    "FootLeft": 5.5022735595703125,
+    "HipRight": 1.2647440433502197,
+    "KneeRight": 3.303114414215088,
+    "AnkleRight": 4.926990509033203,
+    "FootRight": 5.251926422119141,
+    "SpineShoulder": 0.2563712000846863
+  },
+  "joint_confidence_scores": [
+    0.937714695930481,
+    1.019563913345337,
+    1.054421305656433,
+    0.9594218730926514,
+    0.9687374830245972,
+    0.8301106095314026,
+    0.7681331634521484,
+    0.9779736995697021,
+    0.8287102580070496,
+    0.762428879737854,
+    0.9310349822044373,
+    0.8364048004150391,
+    0.7958520650863647,
+    0.7881273031234741,
+    0.9351564645767212,
+    0.8391568660736084,
+    0.7991706132888794,
+    0.7927839756011963,
+    1.0947563648223877
+  ],
+  "normalized_dguha_feature_summary": {
+    "before_clipping": {
+      "x": {
+        "mean": 6.204924574149118e-09,
+        "std": 0.795761227607727
+      },
+      "y": {
+        "mean": 1.8115239308613695e-09,
+        "std": 3.905747413635254
+      },
+      "z": {
+        "mean": 1.6271853864324726e-09,
+        "std": 0.8584225177764893
+      },
+      "velocity": {
+        "mean": 0.0008399059879593551,
+        "std": 0.0
+      },
+      "intensity": {
+        "mean": -0.6910399794578552,
+        "std": 5.960465188081798e-08
+      }
+    },
+    "after_clipping": {
+      "x": {
+        "mean": 2.5102401195908897e-05,
+        "std": 0.7955483198165894
+      },
+      "y": {
+        "mean": 0.04331795871257782,
+        "std": 3.147271156311035
+      },
+      "z": {
+        "mean": 4.204608558211476e-06,
+        "std": 0.8584022521972656
+      },
+      "velocity": {
+        "mean": 0.0008399059879593551,
+        "std": 0.0
+      },
+      "intensity": {
+        "mean": -0.6910399794578552,
+        "std": 5.960465188081798e-08
+      }
+    }
+  }
+}

@@ -281,6 +281,30 @@ Test macro F1: 0.9605
 Test accuracy: 0.9592
 {'boxing': 0.9961089491844177, 'jack': 0.9957805871963501, 'jump': 0.9003984332084656, 'squats': 0.9743589758872986, 'walk': 0.936026930809021}
 
+SEED = 1236
+radHAR/ pointnet V1
+Best validation checkpoint: /kaggle/working/checkpoints/radHAR_pointnetV1/checkpoint_39.pt
+Validation accuracy: 1.0000
+Test macro F1: 0.9637
+Test accuracy: 0.9624
+{'boxing': 1.0, 'jack': 0.9915966391563416, 'jump': 0.9047619104385376, 'squats': 0.9873417615890503, 'walk': 0.9347078800201416}
+
+SEED = 1237
+radHAR/ pointnet V1
+Best validation checkpoint: /kaggle/working/checkpoints/radHAR_pointnetV1/checkpoint_38.pt
+Validation accuracy: 1.0000
+Test macro F1: 0.9470
+Test accuracy: 0.9451
+{'boxing': 1.0, 'jack': 0.9785407781600952, 'jump': 0.8669201731681824, 'squats': 0.9655172228813171, 'walk': 0.9241379499435425}
+
+SEED = 1238
+radHAR/ pointnet V1
+Best validation checkpoint: /kaggle/working/checkpoints/radHAR_pointnetV1/checkpoint_39.pt
+Validation accuracy: 1.0000
+Test macro F1: 0.9526
+Test accuracy: 0.9514
+{'boxing': 0.9961389899253845, 'jack': 0.9872340559959412, 'jump': 0.8760330677032471, 'squats': 0.9831932783126831, 'walk': 0.9205297827720642}
+
 # radHAR/ pointnetV2
 SEED = 1234
 radHAR/ pointnet V2
@@ -297,3 +321,27 @@ Validation accuracy: 1.0000
 Test macro F1: 0.9567
 Test accuracy: 0.9561
 {'boxing': 0.9923076629638672, 'jack': 0.9473684430122375, 'jump': 0.9132075309753418, 'squats': 0.9830508232116699, 'walk': 0.9477351903915405}
+
+SEED = 1236
+radHAR/ pointnet V2
+Best validation checkpoint: checkpoint_39.pt
+Validation accuracy: 1.0000
+Test macro F1: 0.9632
+Test accuracy: 0.9624
+{'boxing': 0.9961389899253845, 'jack': 0.9741379022598267, 'jump': 0.939393937587738, 'squats': 0.9666666388511658, 'walk': 0.9395017623901367}
+
+SEED = 1237
+radHAR/ pointnet V2
+Best validation checkpoint: checkpoint_39.pt
+Validation accuracy: 1.0000
+Test macro F1: 0.9770
+Test accuracy: 0.9765
+{'boxing': 1.0, 'jack': 0.9872340559959412, 'jump': 0.9505703449249268, 'squats': 0.9789029359817505, 'walk': 0.9681978821754456}
+
+SEED = 1238
+radHAR/ pointnet V2
+Best validation checkpoint: checkpoint_36.pt
+Validation accuracy: 1.0000
+Test macro F1: 0.9675
+Test accuracy: 0.9671
+{'boxing': 0.9961089491844177, 'jack': 0.9790794849395752, 'jump': 0.9291338324546814, 'squats': 0.9750000238418579, 'walk': 0.9580419659614563}

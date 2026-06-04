@@ -55,6 +55,11 @@
 \makeatother
 
 \newcommand{\missing}{--}
+\newcommand{\sectionauthor}[1]{%
+  \vspace{-0.4em}%
+  {\small\itshape\textcolor{titleblue}{Student contribution: #1}}%
+  \par\vspace{0.6em}%
+}
 
 \title{Radar Posture Classification: A Comparative Study of SOTA Architectures}
 \author{\small
@@ -85,14 +90,14 @@ CentraleSupélec & CentraleSupélec \\
 \section*{Abstract}
 
 
-In this work, we study and benchmark different deep learning architectures classifying 
-Human Activity Recognition (HAR) (e.g.: running, jumping, sitting, etc.) for radar data. Point cloud 
+In this work, we study and benchmark different deep learning architectures for classifying
+Human Activity Recognition (HAR) tasks (e.g.: running, jumping, sitting, etc.) using radar data. Point cloud
 data offer strong potential due to their 
-privacy-preserving and environment-agnostic properties (lighting conditions etc). However, point cloud-based HAR 
-faces challenges like data sparsity, high computation cost, and a lack of large annotated datasets.
+privacy-preserving and environment-agnostic properties (lighting conditions, etc.). However, point cloud-based HAR
+faces challenges such as data sparsity, high computational cost, and a lack of large annotated datasets.
 
-The deep learning architectures we study in this paper are PointNet, a skeleton predictor based on DGCNN, methods 
-using moment characterization, and simpler machine learning classifiers to use as a baseline. We 
+The deep learning architectures we study in this paper are PointNet~\cite{qi2017pointnet}, a skeleton predictor based on DGCNN~\cite{wang2019dgcnn,zhang2026skdgcnn}, methods
+using moment characterization, and simpler machine learning classifiers used as baselines. We
 benchmarked our models on 4 datasets, all recorded with mmWave radars,
 composed of 2 to 10 classes. Our results highlight which architectural choices are most effective
 for sparse radar point data and provide practical guidance for future
@@ -103,14 +108,14 @@ radar-based human state recognition.
 %==============================================================
 \section{Datasets used}
 
-We studied four radar point datasets, respectively RadHAR, DGUHA,
+We studied four radar point datasets: RadHAR, DGUHA,
 MARS and a dataset we recorded ourselves, which we named Radatatouille.
-They all comport different classes and different features, but all of them have a 
+They all contain different classes and different features, but all of them have a
 time dimension, which some architectures use and some do not. Each "image" is called a frame, and 
-each frame contains from 4 to 40 radar points, which requires some strategy to make that
-amount fixed. A group of frames is called a window, and windows contain a fixed amount of frames.
-We aim at keeping our windows to last around 2 seconds, which is a realistic time for our system
-to predict what pose the user is doing in an industrial scenario.
+each frame contains from 4 to 40 radar points, which requires a strategy to make that
+number fixed. A group of frames is called a window, and windows contain a fixed number of frames.
+We aim to keep our windows around 2 seconds long, which is a realistic time for our system
+to predict the pose the user is performing in an industrial scenario.
 
 
 \begin{table*}[t]
@@ -228,10 +233,10 @@ a user cannot use a large benchtop board.
 
 The dataset focuses on a binary posture-recognition problem with two labels:
 \texttt{sit} and \texttt{stand~up}. Although this is a simpler classification
-problem than the five- or ten-class benchmarks, we recorded the postions is quite hard environment,
+problem than the five- or ten-class benchmarks, we recorded the postures in quite difficult environments,
 with varied radar angles and spatial configurations (using obstacles, walls, and 
-different distances betweent he radar and the subjetc, from 50cm to 3 meters). We recorded
-three subjetcs: Eloan, Othmane and Lucas.
+different distances between the radar and the subject, from 50 cm to 3 meters). We recorded
+three subjects: Eloan, Othmane and Lucas.
 
 Each detected radar point is represented by six features:
 \[
@@ -295,7 +300,7 @@ Total & 768 & 307,200 \\
 
 MARS, for \emph{mmWave-based Assistive Rehabilitation System for Smart
 Healthcare}, is a rehabilitation-oriented dataset containing synchronized
-mmWave radar data and Kinect skeleton annotations. It was collected with a
+mmWave radar data and Kinect skeleton annotations~\cite{an2021mars}. It was collected with a
 Texas Instruments
 \texttt{IWR1443BOOST} mmWave radar and targets ten rehabilitation movements:
 left upper-limb extension, right upper-limb extension, both upper-limb
@@ -348,6 +353,7 @@ Total & 39 & 40,083 \\
 %==============================================================
 \section{Sketching + Transformer}
 \label{sec:sketching-transformer}
+\sectionauthor{Othmane Ouali}
 
 \subsection{Preprocessing: Random Fourier Feature sketching}
 \label{sec:preprocessing}
@@ -601,17 +607,21 @@ splits of RadHAR.
 
 
 
+
+
+
 %==============================================================
 %                          POINTNET
 %==============================================================
 \section{PointNet}
 \label{sec:pointnet}
+\sectionauthor{Eloan Tourtelier}
 
-PointNet~\cite{qi2017pointnet} is a fundamental model in radar deep learning. 
+PointNet~\cite{qi2017pointnet} is a fundamental model in point-cloud deep learning.
 It was built to process an
 unordered set of 3D points with no pixel grid and no voxel ordering. In this project we use two
 variants. V1 is the original vanilla PointNet classifier, which we
-validated on the ModelNet40 3D object benchmark from the original PointNet paper.
+validated on the ModelNet40 3D object benchmark from the original PointNet paper~\cite{qi2017pointnet}.
  V2 adds explicit temporal processing (over the sequence of frames) using 
  an attention mechanism, enabling each point from each frame to "talk" to itself
  across the time window.
@@ -624,21 +634,23 @@ by a TNet, which multiplies the distribution by a matrix to rotate/reflect the d
 Each point is then processed independently by a stack of shared MLPs that increase
 the dimensionality to $1024$. This process is repeated twice in the original paper, but this can be increased.
 A global max-pooling operation then collapses along the point
-dimension into a single 1024-dimensional descriptor. Because max-pooling is invariant by
+dimension into a single 1024-dimensional descriptor. Because max-pooling is invariant to
 permutation, it is invariant to the order in which points are presented. This permutation
 invariance is critical for every model processing radar points,
 because detectors return points in
 arbitrary order.
 Finally, a three-layer MLP head maps the max-pooling output to class logits.
+The detailed V1 module layout and hyperparameters are given in
+Appendix Table~\ref{tab:appendix-pointnet-v1}.
 
 About the two transformation networks (T-Nets): The input
 T-Net predicts a $D \times D$ (the feature dimension) matrix that is applied to the raw point
 coordinates, canonicalizing the point cloud orientation before any learned
 embedding. Both matrices are regularized in the loss with an orthogonality
 penalty ($\lambda = 0.001$) to keep the learned transformations to a rotation and/or
-a reflection, making the lengths, angles, and volumes unchanged;
+a reflection, keeping lengths, angles, and volumes unchanged;
 without this constraint, the high-dimensional feature T-Net would 
-overfit to arbitrary linear maps, and we only want the Tnet to stick to
+overfit to arbitrary linear maps, while we only want the T-Net to stick to
 reorienting the distribution to specialize the layer to this role.
 
 \begin{figure}[H]
@@ -655,7 +667,7 @@ reorienting the distribution to specialize the layer to this role.
 
 Within a single frame,
 points are an unordered set and must be treated symmetrically; across frames,
-there is an insightful ordering, which carries information.
+there is a meaningful ordering, which carries information.
 V2 addresses this by stacking a temporal attention mechanism inside the PointNet
 encoder, right after the TNet rotation.
 
@@ -665,14 +677,16 @@ Each frame can attend to all others and weight the time
 steps most informative for the activity decision. Positional information is
 injected via \emph{Rotary Position Encoding} (RoPE), which encodes relative
 temporal distances rather than absolute positions between frames. 
-We add an attention layer after each TNet, and we hence have two blocks
-TNet --> time Attention --> MLP. The time dimension is mean pooled at the very end,
-after the max pooling (along the $N$ dimension), and right before the final logits generator.
+We add an attention layer after each TNet, and therefore have two blocks:
+TNet --> time attention --> MLP. The time dimension is mean pooled at the very end,
+after max pooling (along the $N$ dimension), and right before the final logits generator.
 
 The addition of the time attention mechanism is not always beneficial.
 It seems the longer the time window is (the more frames it contains), the better
-the accuracy is. However, for practical reasons, we keep our windows to last around 2 seconds,
+the accuracy is. However, for practical reasons, we keep our windows around 2 seconds long,
 which is the time one would expect the radar to classify an input in a commercial scenario.
+The detailed V2 module layout and hyperparameters are given in
+Appendix Table~\ref{tab:appendix-pointnet-v2}.
 
 \subsection{Data Processing}
 \label{sec:augmentation}
@@ -681,13 +695,13 @@ which is the time one would expect the radar to classify an input in a commercia
 Per-feature standardization is applied first: each feature dimension is shifted to zero mean
 and rescaled to unit variance using statistics computed on the \emph{training data only}.
 The same mean and standard deviation are stored and reapplied at test time, so no
-test-distribution information leaks into the preprocessing pipeline. The outliers are then clipped,
-to be bounded by 4 times the variance.
+test-distribution information leaks into the preprocessing pipeline. Outliers are then clipped
+to be bounded by 4 times the standard deviation.
 
 \paragraph{Rolling windows.}
 Each recording is segmented into overlapping windows using a sliding stride smaller than the
 window length. The stride is set to a fraction of the window size (1/2 to 1/3), so
-consecutive windows share some of their frames but start at different time in the
+consecutive windows share some of their frames but start at different times in the
 cycle. This multiplies the number of labeled samples, but extracts more information
 from the datasets, as the classifier becomes more agnostic to the beginning of the recording.
 
@@ -695,7 +709,7 @@ from the datasets, as the classifier becomes more agnostic to the beginning of t
 diversity. Data augmentation is therefore essential to prevent models from overfitting to
 subject-specific radar signatures. We apply a common augmentation pipeline during training only.
 The pipeline operates on raw point clouds before any
-architecture-specific preprocessing , and contains sclaing, offsetting, and jittering.
+architecture-specific preprocessing, and contains scaling, offsetting, and jittering.
 
 \paragraph{Scale.}
 At each training step, all spatial coordinates $(x, y, z)$ of a window are multiplied by a
@@ -718,9 +732,9 @@ sensor noise and single-frame detection instability.
 \subsection{Results}
 \label{sec:pointnet-results}
 
-Here are the final accuracies and F1 scores obtained on each of the four datasets. We used 5 different 
-initizlaitions with 5 seeds, to make the results reproductible. We observe that the initizlaition 
-has a very impactful outcome on the scores
+Here are the final accuracies and F1 scores obtained on each of the four datasets. We used 5 different
+initializations with 5 seeds to make the results reproducible. We observe that the initialization
+has a strong impact on the scores.
 
 \begin{table}[H]
 \centering
@@ -782,11 +796,17 @@ little temporal structure for the attention mechanism to leverage. In this low-d
 the extra parameters of V2 appear to hurt rather than help, consistent with the MARS
 observation in Section~\ref{sec:results}.
 
+
+
+
+
+
 %==============================================================
 %                 POINTWISE ATTENTION POOLING
 %==============================================================
 \section{Pointwise Attention Pooling}
 \label{sec:pointwise-attention-pooling}
+\sectionauthor{Lucas Cheylan}
 
 This section presents the raw-point attention model studied as a direct
 classifier for radar activity recognition. It is designed for sparse radar
@@ -935,23 +955,33 @@ relative importance of individual detections. Compared with heavier
 architectures, it is easier to train and gives a clear interpretation of where
 attention is applied: first over points, then over time.
 
+
+
+
+
 %==============================================================
 %                     SKELETON CLASSIFIER
 %==============================================================
 \section{Skeleton classifier with dgcnn}
 \label{sec:skeleton-classifier}
+\sectionauthor{Eloan Tourtelier}
 
-The SK-DGCNN approach used in the project follows a two-stage strategy:
+The SK-DGCNN approach follows a sequential two-stage strategy inspired by the
+SK-DGCNN method~\cite{zhang2026skdgcnn}:
 instead of classifying sparse radar points directly, it first maps each radar
-frame to a structured human skeleton and then classifies the resulting skeleton
-sequence. The motivation is to make the intermediate representation closer to
-human motion: a radar point cloud is noisy, sparse and unordered, whereas a
-skeleton has fixed joints, fixed semantics and a stable graph structure.
+frame to a structured human skeleton and then classifies the resulting skeleton. 
+This approach has been described as successful in many cases, and
+it gives the model more information in principle, especially about skeleton posture feasibility:
+for example, a foot cannot be 1 meter away from the knee. It also enables the use
+of external datasets, counterbalancing data sparsity issues for the target dataset.
 
 \subsection{Radar-to-skeleton stage}
 
-The first stage is a skeleton-aware DGCNN regressor trained on MARS, where
-radar frames are synchronized with Kinect skeleton annotations. Each MARS radar
+The first stage is a skeleton-aware DGCNN regressor trained on MARS~\cite{an2021mars}. DGCNN is a
+very strong model, which was built as a generalization of PointNet~\cite{qi2017pointnet} by introducing
+spatial neighborhoods using graphs~\cite{wang2019dgcnn}. In MARS, radar frames are synchronized with Kinect
+skeleton annotations, which record the real skeleton positions.
+Each MARS radar
 frame is cropped or padded to 25 points and represented by five features:
 $x,y,z$, Doppler velocity and intensity. A dynamic $k$-nearest-neighbor graph
 is recomputed inside the network, and three EdgeConv blocks extract local
@@ -963,6 +993,8 @@ The output is a centered 19-joint skeleton using the lateral and vertical
 coordinates $(x,z)$, giving 38 regression targets per frame. We center the
 skeleton around the \texttt{SpineShoulder} joint so that the regressor focuses
 on body pose rather than absolute position in the radar field of view.
+The architecture and training hyperparameters for this stage are summarized in
+Appendix Table~\ref{tab:appendix-skdgcnn}.
 
 \subsection{Skeleton classification stage}
 
@@ -985,6 +1017,7 @@ radar evidence.
 %                    CLASSICAL BASELINES
 %==============================================================
 \section{Classical Baselines}
+\sectionauthor{Meriem Mellouki and Zaineb Tarhda}
 
 In this section, we present the comparative performance of baseline models
 across the four radar datasets. The objective is to evaluate how far global
@@ -996,7 +1029,7 @@ geometric modeling.
 The evaluation protocol was applied consistently across datasets: each radar
 frame was compressed into a fixed-size vector of 30 statistical moments. We
 assessed several classical classifiers, ranging from linear models to ensemble
-tree-based methods and shallow multi-layer perceptrons.
+tree-based methods and shallow multi-layer perceptrons~\cite{cox1958logistic,cortes1995svm,breiman2001random,chen2016xgboost,rumelhart1986backprop}.
 
 \subsection{Classical ML Performance on RadHAR}
 

@@ -490,11 +490,103 @@ $(3\,565, 60, 256)$ for testing.
 
 
 \subsection{Transformer encoder}
-% À venir
+\label{sec:transformer}
+
+\paragraph{Overview.}
+The preprocessing stage turns each 2-second window into a sequence of
+$60$ sketches $s_1, \ldots, s_{60} \in \mathbb{R}^{m}$, one per frame.
+We treat this sequence as a sequence of $60$ tokens and process it with
+a Transformer encoder, which models temporal dependencies between frames
+through self-attention. We deliberately do not introduce an input projection
+layer: the sketches are fed directly to the encoder, so that the model
+dimension equals the sketch dimension, $d_{\text{model}} = m$.
+
+\paragraph{Positional encoding.}
+Self-attention is permutation-invariant: it would treat the $60$ frames as an
+unordered set and discard the temporal order that distinguishes activities such
+as walking from boxing. To restore the temporal order, we add a fixed
+sinusoidal positional encoding~\cite{vaswani2017attention} to each sketch before
+the first encoder layer:
+\[
+\tilde{s}_t = s_t + \mathrm{PE}(t), \qquad t = 1, \ldots, 60.
+\]
+For each position $t$ and each dimension $i = 0, \ldots, m-1$:
+\[
+\mathrm{PE}(t)_{2i} = \sin\!\left(\frac{t}{10000^{2i / m}}\right),
+\quad
+\mathrm{PE}(t)_{2i+1} = \cos\!\left(\frac{t}{10000^{2i / m}}\right).
+\]
+This encoding is computed once and kept fixed throughout training.
+
+\paragraph{Encoder block.}
+Each encoder layer follows the standard
+Transformer~\cite{vaswani2017attention} design: a multi-head self-attention
+sublayer followed by a position-wise feed-forward network, each wrapped in a
+residual connection and layer normalization. The self-attention uses $h = 4$
+heads; the feed-forward sublayer has a single hidden layer of width $2m$ with
+a GELU activation. Dropout with rate $p = 0.4$ is applied inside each sublayer.
+We stack $L = 3$ such layers.
+
+\paragraph{Classification head.}
+After the encoder layers, we obtain a sequence of contextualized frame
+representations $h_1, \ldots, h_{60}$. We aggregate them by mean pooling over
+the temporal axis,
+\[
+\bar{h} = \frac{1}{60}\sum_{t=1}^{60} h_t \in \mathbb{R}^{m},
+\]
+and feed the result to a linear layer that outputs the activity logits. We use
+mean pooling rather than a dedicated \texttt{[CLS]} token because it gave
+comparable results without introducing an extra learned token.
+
+\paragraph{Hyperparameters.}
+The architecture is governed by four hyperparameters: the model dimension
+$m = 256$, the number of encoder layers $L = 3$, the number of attention heads
+$h = 4$, and the dropout rate $p = 0.4$.
 
 
 \subsection{Training protocol}
-% À venir
+\label{sec:training}
+
+\paragraph{Loss and optimization.}
+We minimize the cross-entropy loss between predicted logits and ground-truth
+activity labels. Optimization is performed with Adam at a fixed learning rate
+of $10^{-4}$, with no weight decay and no learning-rate schedule. We use a
+mini-batch size of $32$ and train for $30$ epochs, without early stopping.
+
+\paragraph{Weight initialization.}
+All trainable weight matrices in the Transformer encoder and final
+classification head are initialized with Kaiming initialization; biases are
+initialized to zero. The random-projection matrix $W$ of the sketching step is
+not trained: it is drawn once from $\mathcal{N}(0, \sigma^2)$ at the start of
+training and kept fixed.
+
+\paragraph{Evaluation protocol.}
+We use the official RadHAR train/test split ($12\,150$ training windows and
+$3\,565$ test windows) without carving out a separate validation set. The final
+test accuracy reported in the main comparison corresponds to the model state at
+the last training epoch.
+
+\paragraph{Training dynamics.}
+The training loss decreases smoothly toward zero, while the test loss decreases
+overall but exhibits large epoch-to-epoch variance. This pattern is not a
+typical sign of overfitting, where the test loss would increase monotonically;
+we attribute it primarily to a distributional gap between the training and test
+splits of RadHAR.
+
+\begin{figure}[H]
+    \centering
+    \IfFileExists{loss.png}{%
+        \includegraphics[width=\columnwidth]{loss.png}%
+    }{%
+        \fbox{\parbox{0.9\columnwidth}{\centering Missing local file:
+        \texttt{loss.png}}}%
+    }
+    \caption{Training and test cross-entropy loss across the 30 epochs. The
+    training loss converges smoothly toward zero, while the test loss exhibits
+    large epoch-to-epoch variance attributable to the distributional gap between
+    the train and test splits of RadHAR.}
+    \label{fig:training-curves}
+\end{figure}
 
 
 \subsection{Ablation studies}
@@ -805,9 +897,6 @@ frames, stride 10, up to 32 points per frame, and 12 training epochs.
 
 \begin{table}[H]
 \centering
-\caption{Results of the pointwise attention pooling model on four radar
-datasets.}
-\label{tab:pointwise-attention-results}
 \scriptsize
 \setlength{\tabcolsep}{3pt}
 \resizebox{\columnwidth}{!}{%
@@ -815,19 +904,21 @@ datasets.}
 \toprule
 Dataset & Classes & Test windows & Test accuracy & Macro F1 \\
 \midrule
-RaDataTouille & 2 & 651 & 81.41\% & 0.8118 \\
-MARS & 10 & 1,125 & 74.31\% & 0.7343 \\
-RadHAR & 5 & 3,565 & \textbf{96.07\%} & \textbf{0.9616} \\
-DGUHA & 7 & 5,635 & 92.94\% & 0.9299 \\
+RaDataTouille & 2 & 2,319 & 76.46\% & 0.7643 \\
+MARS & 10 & 3,877 & 82.51\% & 0.8276 \\
+RadHAR & 5 & 3,565 & \textbf{95.20\%} & \textbf{0.9523} \\
+DGUHA & 7 & 8,372 & 91.61\% & 0.9166 \\
 \bottomrule
 \end{tabular}
 }
+\caption{Results of the pointwise attention pooling model on four radar datasets.}
+\label{tab:pointwise-attention-results}
 \end{table}
 
 The results in Table~\ref{tab:pointwise-attention-results} show that this
 mechanism is strong on RadHAR and DGUHA, while MARS and RaDataTouille remain
 more difficult. RadHAR is the most favorable setting for the model, with a test
-accuracy of 96.07\%. DGUHA also gives a high score, although it was run on GPU
+accuracy of 95.20\%. DGUHA also gives a high score, although it was run on GPU
 with a larger batch size to keep training time practical. MARS is harder because
 it contains ten rehabilitation movements with closer visual and kinematic
 patterns. RaDataTouille is smaller and targets a sit-versus-stand setting, so
@@ -925,11 +1016,10 @@ Since the 30-dimensional moment vector has no spatial or sequential structure,
 convolutional or recurrent architectures bring no benefit here. We therefore use
 a fully-connected MLP with three hidden layers:
 
-\begin{table*}[t]
+\begin{table}[H]
 \centering
-\caption{MLP architecture used for the moment-based baseline.}
-\label{tab:moments-mlp}
-\small
+\scriptsize
+\resizebox{\columnwidth}{!}{%
 \begin{tabular}{llll}
 \toprule
 Layer   & Output dim & Activation & Note \\
@@ -941,7 +1031,10 @@ Dense 3 & 32         & ReLU       & \\
 Output  & 5          & Softmax    & One logit per activity class \\
 \bottomrule
 \end{tabular}
-\end{table*}
+}
+\caption{MLP architecture used for the moment-based baseline.}
+\label{tab:moments-mlp}
+\end{table}
 
 The model is trained with early stopping (patience of 10 epochs,
 validation fraction 15\%) to prevent overfitting on the relatively small
@@ -954,11 +1047,10 @@ severely regularized by the low input dimensionality.
 Table~\ref{tab:moments-per-class} reports per-class precision, recall and
 F1-score on the RadHAR test set (58 samples, 5 classes).
 
-\begin{table*}[t]
+\begin{table}[H]
 \centering
-\caption{Per-class performance of the moment-based MLP on RadHAR (test set).}
-\label{tab:moments-per-class}
-\small
+\scriptsize
+\resizebox{\columnwidth}{!}{%
 \begin{tabular}{lcccc}
 \toprule
 Activity & Precision & Recall & F1-score & Support \\
@@ -972,7 +1064,10 @@ Walk    & 0.58 & 1.00 & 0.74 & 14 \\
 \textbf{Overall accuracy} & \multicolumn{4}{c}{\textbf{58.6\%}} \\
 \bottomrule
 \end{tabular}
-\end{table*}
+}
+\caption{Per-class performance of the moment-based MLP on RadHAR (test set).}
+\label{tab:moments-per-class}
+\end{table}
 
 \noindent The model achieves \textbf{58.6\%} accuracy, well above the
 random baseline of 20\%. Locomotor activities with a clear spatial signature
@@ -1038,16 +1133,166 @@ classifier only sees the incorrect skeleton and cannot recover the discarded
 radar evidence.
 
 %==============================================================
-%                          XGBOOST
+%                      SIMPLE APPROACHES
 %==============================================================
 \section{Simple approaches}
-% PointNet, PointNet++, PointMLP, transformer-based models, etc.
+
+In this section, we present the comparative performance of baseline models
+across the four radar datasets. The objective is to evaluate how far global
+statistical feature extraction can go as a lightweight alternative to more
+complex deep learning architectures. By establishing these baselines, we
+quantify the information gain provided by temporal dynamics and spatial
+geometric modeling.
+
+The evaluation protocol was applied consistently across datasets: each radar
+frame was compressed into a fixed-size vector of 30 statistical moments. We
+assessed several classical classifiers, ranging from linear models to ensemble
+tree-based methods and shallow multi-layer perceptrons.
+
+\subsection{Classical ML Performance on RadHAR}
+
+For the RadHAR dataset, which contains macroscopically distinct motions, we
+evaluated the classical models on a strict frame-by-frame basis, explicitly
+removing temporal context.
+
+\begin{table}[H]
+\centering
+\scriptsize
+\setlength{\tabcolsep}{3pt}
+\resizebox{\columnwidth}{!}{%
+\begin{tabular}{lcc}
+\toprule
+Model & Accuracy (\%) & Macro F1 (\%) \\
+\midrule
+Logistic Regression & 52.1 & 51.3 \\
+Linear SVM & 51.8 & 50.6 \\
+Random Forest & 72.9 & 72.5 \\
+XGBoost & 73.9 & 73.4 \\
+MLP baseline & 74.9 & 74.6 \\
+\bottomrule
+\end{tabular}
+}
+\caption{Performance of classical ML models on RadHAR, frame by frame.}
+\label{tab:radhar-classical-results}
+\end{table}
+
+The performance ceiling of approximately $75\%$ confirms that statistical
+extraction is efficient for distinct activities, but evaluating frames in
+isolation leaves a significant margin of error.
+
+\begin{figure}[H]
+    \centering
+    \IfFileExists{MATRICERADHAR.PNG}{%
+        \includegraphics[width=0.8\columnwidth]{MATRICERADHAR.PNG}%
+    }{%
+        \fbox{\parbox{0.8\columnwidth}{\centering Missing local file:
+        \texttt{MATRICERADHAR.PNG}}}%
+    }
+    \caption{Confusion matrix of the best classical ML classifier on RadHAR.}
+    \label{fig:cm-radhar}
+\end{figure}
+
+\subsection{Classical ML Performance on DGUHA}
+
+The DGUHA dataset introduces a higher level of complexity with seven subtle
+classes. Ensemble tree-based models perform best, with Random Forest reaching
+$71.4\%$ accuracy.
+
+\begin{table}[H]
+\centering
+\scriptsize
+\setlength{\tabcolsep}{3pt}
+\resizebox{\columnwidth}{!}{%
+\begin{tabular}{lcc}
+\toprule
+Model & Accuracy (\%) & Macro F1 (\%) \\
+\midrule
+Logistic Regression & 67.7 & 67.0 \\
+Linear SVM & 59.6 & 58.0 \\
+Random Forest & 71.4 & 69.9 \\
+XGBoost & 70.8 & 70.0 \\
+MLP baseline & 63.4 & 63.9 \\
+\bottomrule
+\end{tabular}
+}
+\caption{Performance of classical ML models on DGUHA.}
+\label{tab:dguha-classical-results}
+\end{table}
+
+Confusion between geometrically similar motions highlights the limits of global
+statistical summaries for fine-grained gestures.
+
+\begin{figure}[H]
+    \centering
+    \IfFileExists{MATRICEDGUHA.PNG}{%
+        \includegraphics[width=0.8\columnwidth]{MATRICEDGUHA.PNG}%
+    }{%
+        \fbox{\parbox{0.8\columnwidth}{\centering Missing local file:
+        \texttt{MATRICEDGUHA.PNG}}}%
+    }
+    \caption{Confusion matrix of the Random Forest classifier on DGUHA.}
+    \label{fig:cm-dguha}
+\end{figure}
+
+\subsection{The Generalization Bottleneck on MARS}
+
+MARS reveals the critical limitations of statistical approaches. Under a random
+split, XGBoost reaches $61.7\%$ accuracy, but the macro F1-score collapses to
+$23.8\%$, indicating a lazy-prediction trap.
+
+\begin{table}[H]
+\centering
+\scriptsize
+\setlength{\tabcolsep}{3pt}
+\resizebox{\columnwidth}{!}{%
+\begin{tabular}{lcc}
+\toprule
+Model & Accuracy (\%) & Macro F1 (\%) \\
+\midrule
+Logistic Regression & 40.3 & 15.3 \\
+Linear SVM & 37.0 & 14.5 \\
+Random Forest & 58.4 & 22.6 \\
+MLP baseline & 37.9 & 14.2 \\
+XGBoost & 61.7 & 23.8 \\
+\bottomrule
+\end{tabular}
+}
+\caption{Performance of classical ML models on MARS with a random split.}
+\label{tab:mars-classical-results}
+\end{table}
+
+Classical pipelines fail under subject-isolated evaluation because they overfit
+to physical attributes rather than geometric movement shapes. This spatial
+blindness motivates advanced spatial architectures such as DGCNN.
+
+\begin{figure}[H]
+    \centering
+    \IfFileExists{MATRICEMARSNOR.PNG}{%
+        \includegraphics[width=0.8\columnwidth]{MATRICEMARSNOR.PNG}%
+    }{%
+        \fbox{\parbox{0.8\columnwidth}{\centering Missing local file:
+        \texttt{MATRICEMARSNOR.PNG}}}%
+    }
+    \caption{Confusion matrix on MARS with Random Forest, exposing predictive
+    collapse.}
+    \label{fig:cm-mars}
+\end{figure}
+
+\subsection{Summary}
+
+The progression is clear: simple macro-motions such as RadHAR can be partly
+solved with statistical moments, fine-grained actions such as DGUHA require
+non-linear ensemble methods, and symmetrical cross-subject motions such as MARS
+demand local 3D structural modeling. These results confirm that architectural
+complexity is a functional requirement for robust human activity recognition,
+not merely an optimization.
 
 
 %==============================================================
 %                          RESULTS
 %==============================================================
 \section{Results}
+\label{sec:results}
 
 \subsection{Comparison}
 Table~\ref{tab:global-results} summarizes the comparison grid used for the
@@ -1105,8 +1350,6 @@ architectures rather than frame-independent baselines.
 
 \begin{table}[H]
 \centering
-\caption{Global comparison table for the studied datasets and architectures.}
-\label{tab:global-results}
 \scriptsize
 \setlength{\tabcolsep}{2pt}
 \resizebox{\columnwidth}{!}{%
@@ -1118,7 +1361,7 @@ RadHAR & PointNet V1 & 3,341,909 & 40 & 0.9639 & 0.9651 \\
 RadHAR & PointNet V2 & 3,358,357 & 40 & 0.9639 & 0.9648 \\
 RadHAR & SK-DGCNN & 1,081,093 & 200 & 0.8877 & 0.8879 \\
 RadHAR & Moments MLP & 14,469 & \missing & 0.5860 & 0.5120 \\
-RadHAR & Sketching Transformer & \missing & \missing & \missing & \missing \\
+RadHAR & Sketching Transformer & 791,000 & 30 & 0.9640 & \missing \\
 \midrule
 RaDataTouille & PointNet V1 & 3,345,766 & \missing & 0.8257 & 0.8203 \\
 RaDataTouille & PointNet V2 & 3,362,294 & \missing & 0.8017 & 0.7998 \\
@@ -1140,6 +1383,8 @@ MARS & Sketching Transformer & \missing & \missing & \missing & \missing \\
 \bottomrule
 \end{tabular}
 }
+\caption{Global comparison table for the studied datasets and architectures.}
+\label{tab:global-results}
 \end{table}
 
 
@@ -1152,6 +1397,26 @@ MARS & Sketching Transformer & \missing & \missing & \missing & \missing \\
 
 \appendix
 \section{Appendix}
+
+\subsection{Transformer architecture diagram}
+\label{app:architecture}
+
+\begin{figure*}[H]
+    \centering
+    \IfFileExists{transformer_architecture.png}{%
+        \includegraphics[width=0.6\textwidth]{transformer_architecture.png}%
+    }{%
+        \fbox{\parbox{0.6\textwidth}{\centering Missing local file:
+        \texttt{transformer\_architecture.png}}}%
+    }
+    \caption{Architecture of our Transformer encoder for RadHAR
+    classification. The input is a sequence of $60$ sketches of dimension
+    $m = 256$, to which a fixed sinusoidal positional encoding is added. The
+    sequence is processed by $L = 3$ identical encoder blocks, each with
+    $h = 4$ attention heads and a feed-forward expansion ratio of $2$,
+    temporally pooled, and classified into the $5$ activity classes.}
+    \label{fig:transformer-architecture}
+\end{figure*}
 
 \subsection{PointNet V1 architecture and hyperparameters}
 
@@ -1167,8 +1432,6 @@ accumulation 1.
 
 \begin{table}[h]
 \centering
-\caption{PointNet V1 module layout.}
-\label{tab:appendix-pointnet-v1}
 \scriptsize
 \setlength{\tabcolsep}{3pt}
 \resizebox{\columnwidth}{!}{%
@@ -1185,6 +1448,8 @@ Classifier & $1024\!\to\!512\!\to\!5$ with dropout & 5 logits \\
 \bottomrule
 \end{tabular}
 }
+\caption{PointNet V1 module layout.}
+\label{tab:appendix-pointnet-v1}
 \end{table}
 
 \subsection{PointNet V2 architecture and hyperparameters}
@@ -1199,8 +1464,6 @@ attention is aware of relative frame position.
 
 \begin{table}[h]
 \centering
-\caption{PointNet V2 module layout.}
-\label{tab:appendix-pointnet-v2}
 \scriptsize
 \setlength{\tabcolsep}{3pt}
 \resizebox{\columnwidth}{!}{%
@@ -1215,6 +1478,8 @@ Classifier & $1024\!\to\!512\!\to\!5$ with dropout 0.5 & 5 logits \\
 \bottomrule
 \end{tabular}
 }
+\caption{PointNet V2 module layout.}
+\label{tab:appendix-pointnet-v2}
 \end{table}
 
 \subsection{SK-DGCNN architecture and hyperparameters}
@@ -1233,8 +1498,6 @@ KL-divergence over the $z$ then $x$ skeleton axes, changing phase every
 
 \begin{table}[h]
 \centering
-\caption{SK-DGCNN skeleton regressor layout.}
-\label{tab:appendix-skdgcnn}
 \scriptsize
 \setlength{\tabcolsep}{3pt}
 \resizebox{\columnwidth}{!}{%
@@ -1252,6 +1515,8 @@ Heads & Linear $128\!\to\!1$ for $x$, Linear $128\!\to\!1$ for $z$ & 38 values \
 \bottomrule
 \end{tabular}
 }
+\caption{SK-DGCNN skeleton regressor layout.}
+\label{tab:appendix-skdgcnn}
 \end{table}
 
 \nocite{*}

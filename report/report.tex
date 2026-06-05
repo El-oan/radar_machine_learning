@@ -102,7 +102,9 @@ using moment characterization, sketching, and simpler machine learning classifie
 benchmarked our models on four datasets, all recorded with mmWave radars and
 containing 2 to 10 classes. Our results highlight which architectural choices are most effective
 for sparse radar point data and provide practical guidance for future
-radar-based human state recognition.
+radar-based human state recognition. More importantly, they show that benchmark
+accuracy alone is not enough: for radar HAR, the data split, subject diversity,
+and temporal windowing protocol can matter as much as the architecture itself.
 
 %==============================================================
 %                          DATA
@@ -1781,13 +1783,6 @@ baselines, a sketching Transformer, PointNet (V1 and V2), a pointwise attention 
 model, and a two-stage skeleton pipeline based on SK-DGCNN---on four mmWave radar
 point-cloud datasets covering 2 to 10 human activity classes.
 
-\paragraph{Temporal context is the single most important factor.}
-The moment-based MLP, which classifies one frame at a time, reaches only $58.6\%$ on
-RadHAR---a gap of nearly $38$ percentage points below PointNet V1.
-Activities such as squats and jumping jacks are spatially indistinguishable in a single
-frame; their periodicity only becomes apparent over a sequence of frames.
-This gap is the clearest quantitative argument for using sequence-aware architectures
-over frame-independent baselines.
 
 \paragraph{PointNet variants are the most robust choice across datasets.}
 PointNet V1 and V2 score highest or near-highest on all four datasets.
@@ -1810,9 +1805,6 @@ from data leakage---the published split overlaps training windows into the test 
 making the evaluation substantially easier than a clean subject-isolated protocol.
 
 \paragraph{Architecture complexity must match the data regime.}
-Classical baselines (Random Forest, XGBoost) are competitive on simple tasks
-($72.9\%$--$73.9\%$ on RadHAR) and require no GPU training, but collapse under
-cross-subject evaluation on MARS (macro F1 $<24\%$).
 The Sketching Transformer reaches $96.4\%$ on RadHAR with a lightweight preprocessing
 pipeline, demonstrating that compact random-feature representations are a strong
 alternative to raw point-cloud processing when training data is ample.
@@ -1824,6 +1816,8 @@ Accuracy numbers on these benchmarks measure in-distribution performance rather 
 true generalization, and near-ceiling scores on RadHAR should be read accordingly.
 Future work should prioritize collecting larger, subject-diverse recordings and
 evaluating under strict leave-one-subject-out protocols.
+Without this shift in evaluation protocol, improvements in model design will be
+difficult to separate from hidden dataset shortcuts.
 On the modeling side, integrating temporal information into the moment baseline (e.g.\
 computing moments over a sliding window or feeding per-frame descriptors to an LSTM)
 and improving the skeleton regression stage with uncertainty-aware training are

@@ -55,7 +55,7 @@ RaDataTouille is the dataset we recorded ourselves using our radar. It uses six 
 
 ### DGUHA
 
-DGUHA is the Dongguk University Human Activity dataset. It contains both radar points and recordings from Kinect, used to draw the user skeleton. It has seven classes: running, jumping, sitting down and standing up, both upper limb extension, falling forward, right limb extension, and left limb extension. The radar points used in this repository have three features: `x`, `y`, and `z`. Each clip has 400 frames and 25 points per frame.
+DGUHA is the Dongguk University Human Activity dataset, introduced by Lee and Kim (2023) in "MTGEA: A Multimodal Two-Stream GNN Framework for Efficient Point Cloud and Skeleton Data Alignment" (Sensors 23(5):2787). It contains both radar points and recordings from Kinect, used to draw the user skeleton. The dataset was collected from 19 subjects, all in their twenties, with an average age of 23. It has seven classes: running, jumping, sitting down and standing up, both upper limb extension, falling forward, right limb extension, and left limb extension. The radar points used in this repository have three features: `x`, `y`, and `z`. Each clip has 400 frames and 25 points per frame.
 
 | Split | Clips | Frames |
 | --- | ---: | ---: |
@@ -64,6 +64,8 @@ DGUHA is the Dongguk University Human Activity dataset. It contains both radar p
 | Total | 768 | 307,200 |
 
 The dataset is available to download at: <https://drive.google.com/file/d/1wBEGb_rIJLsroDIDYG0_OJ_cb8f_MR3Q/view?usp=sharing>
+
+Paper: <https://www.mdpi.com/1424-8220/23/5/2787>. Dataset and code: <https://github.com/AIC-DGU/MTGEA>.
 
 ### MARS
 

@@ -61,7 +61,7 @@
   \par\vspace{0.6em}%
 }
 
-\title{Radar Posture Classification: A Comparative Study of SOTA Architectures}
+\title{Radar Posture Classification: A Comparative Study of State-of-the-Art Architectures}
 \author{\small
 \begin{tabular}{ccc}
 Eloan Tourtelier & Othmane Ouali & Lucas Cheylan \\
@@ -91,13 +91,14 @@ CentraleSupélec & CentraleSupélec \\
 
 
 In this work, we study and benchmark different deep learning architectures for
-Human Activity Recognition (HAR) tasks (e.g., running, jumping, sitting, etc.) using radar data. Point cloud
+human activity recognition (HAR) tasks (e.g., running, jumping, sitting, etc.) using radar data. Point cloud
 data offer strong potential due to their 
 privacy-preserving and environment-agnostic properties (lighting conditions, etc.). However, point cloud-based HAR
 faces challenges such as data sparsity, high computational cost, and a lack of large annotated datasets.
 
-The deep learning architectures we study in this paper are PointNet~\cite{qi2017pointnet}, a skeleton predictor based on DGCNN~\cite{wang2019dgcnn,zhang2026skdgcnn}, methods
-using moment characterization, and simpler machine learning classifiers used as baselines. We
+The methods we study in this paper include PointNet~\cite{qi2017pointnet}, 
+a skeleton predictor based on DGCNN~\cite{wang2019dgcnn,zhang2026skdgcnn}, methods
+using moment characterization, sketching, and simpler machine learning classifiers used as baselines. We
 benchmarked our models on four datasets, all recorded with mmWave radars and
 containing 2 to 10 classes. Our results highlight which architectural choices are most effective
 for sparse radar point data and provide practical guidance for future
@@ -111,16 +112,16 @@ radar-based human state recognition.
 We studied four radar point datasets: RadHAR, DGUHA,
 MARS, and a dataset we recorded ourselves, which we named RaDataTouille.
 They all contain different classes and different features, but all of them have a
-time dimension, which some architectures use and some do not. Each "image" is called a frame, and 
-each frame contains 4 to 40 radar points, which requires a strategy to make that
-number fixed. A group of frames is called a window, and windows contain a fixed number of frames.
+time dimension, which some architectures use and some do not. Each radar snapshot is called a frame, and 
+each frame contains 4 to 40 radar points, which requires a strategy for producing
+fixed-size inputs. A group of frames is called a window, and windows contain a fixed number of frames.
 We aim to keep our windows around 2 seconds long, which is a realistic time for our system
-to predict the pose the user is performing in an industrial scenario.
+to predict the activity the user is performing in an industrial scenario.
 
 \paragraph{Source code.}
-The radHAR, radatatouille and MARS datasets are available in this repository:
+The RadHAR, RaDataTouille, and MARS datasets are available in this repository:
 \href{https://github.com/El-oan/radar_machine_learning/tree/main/datasets}{\texttt{datasets/}}. 
-The dguha dataset can be downloaded from the link in the repository README.
+The DGUHA dataset can be downloaded from the link in the repository README.
 
 \begin{table*}[t]
 \centering
@@ -240,7 +241,7 @@ The dataset focuses on a binary posture-recognition problem with two labels:
 problem than the five- or ten-class benchmarks, we recorded the postures in quite difficult environments,
 with varied radar angles and spatial configurations (using obstacles, walls, and 
 different distances between the radar and the subject, from 50 cm to 3 meters). We recorded
-three subjects: Eloan, Othmane and Lucas.
+three subjects: Eloan, Othmane, and Lucas.
 
 Each detected radar point is represented by six features:
 \[
@@ -269,8 +270,10 @@ Total & 19 & 27,411 \\
 \label{sec:dguha}
 
 DGUHA, the Dongguk University Human Activity dataset, was introduced by Lee and
-Kim in the MTGEA paper~\cite{lee2023mtgea}. It contains synchronized radar
-point clouds and Kinect recordings, with seven activity labels: running,
+Kim in the MTGEA paper~\cite{lee2023mtgea}. The dataset and code are available
+from the authors' MTGEA repository.\footnote{\url{https://github.com/AIC-DGU/MTGEA}}
+It contains synchronized radar point clouds and Kinect recordings from 19
+subjects in their twenties, with an average age of 23, and seven activity labels: running,
 jumping, sitting down and standing up, both upper-limb extension, falling
 forward, right-limb extension and left-limb extension.
 
@@ -387,7 +390,7 @@ permutation, it is invariant to the order in which points are presented. This pe
 invariance is critical for every model processing radar points,
 because detectors return points in
 arbitrary order.
-Finally, a three-layer MLP head maps the max-pooling output to class logits.
+Finally, a three-layer MLP head maps the max-pooled output to class logits.
 The detailed V1 module layout and hyperparameters are given in
 Appendix Table~\ref{tab:appendix-pointnet-v1}.
 
@@ -399,12 +402,12 @@ penalty ($\lambda = 0.001$) to keep the learned transformations close to a rotat
 a reflection, keeping lengths, angles, and volumes unchanged;
 without this constraint, the high-dimensional feature T-Net would 
 overfit to arbitrary linear maps, while we only want the T-Net to stick to
-reorienting the distribution to specialize the layer to this role.
-An orthogonal matrix $A$, verifies
+reorienting the distribution.
+An orthogonal matrix $A$ verifies
 \[
 A A^\top = I,
 \]
-and implemented in the loss as a deviation from the identity matrix,
+and is implemented in the loss as a deviation from the identity matrix,
 $\lVert I - A A^\top\rVert_F^2$.
 
 \begin{figure}[H]
@@ -433,11 +436,11 @@ injected via \emph{Rotary Position Encoding} (RoPE), which encodes relative
 temporal distances rather than absolute positions between frames. 
 We add an attention layer after each T-Net, and therefore have two blocks:
 T-Net $\rightarrow$ time attention $\rightarrow$ MLP. The time dimension is mean pooled at the very end,
-after max pooling (along the $N$ dimension), and right before the final logits generator.
+after max pooling (along the $N$ dimension), and right before the final classification head.
 
 The addition of the time attention mechanism is not always beneficial.
-It seems the longer the time window is (the more frames it contains), the better
-the accuracy is. However, for practical reasons, we keep our windows around 2 seconds long,
+The longer the time window is (the more frames it contains), the better
+the accuracy tends to be. However, for practical reasons, we keep our windows around 2 seconds long,
 which is the time one would expect the radar to classify an input in a commercial scenario.
 The detailed V2 module layout and hyperparameters are given in
 Appendix Table~\ref{tab:appendix-pointnet-v2}.
@@ -507,9 +510,9 @@ Macro F1 gives equal weight to each class by averaging class-wise F1:
 \frac{2\,\mathrm{Precision}_c\,\mathrm{Recall}_c}
 {\mathrm{Precision}_c+\mathrm{Recall}_c}.
 \]
-F1 is better when the datatsets are umbalanced, whihc is not the case for our datatsets.
- We still compute as it provides some information when one of the class is not well classified
- compared to the others.
+F1 is especially useful when datasets are imbalanced, which is not the case for our datasets.
+We still compute it, as it provides information when one class is less well classified
+than the others.
 
 \begin{table}[H]
 \centering
@@ -1141,7 +1144,7 @@ attention is applied: first over points, then over time.
 %==============================================================
 %                     SKELETON CLASSIFIER
 %==============================================================
-\section{Skeleton classifier with dgcnn}
+\section{Skeleton Classifier with DGCNN}
 \label{sec:skeleton-classifier}
 \sectionauthor{Eloan Tourtelier}
 
@@ -1150,7 +1153,7 @@ SK-DGCNN method~\cite{zhang2026skdgcnn}:
 instead of classifying sparse radar points directly, it first maps each radar
 frame to a structured human skeleton and then classifies the resulting skeleton. 
 This approach has been described as successful in many cases, and
-it gives the model more information in principle, especially about skeleton posture feasibility:
+it gives the model more information in principle, especially about skeleton feasibility:
 for example, a foot cannot be 1 meter away from the knee. It also enables the use
 of external datasets, counterbalancing data sparsity issues for the target dataset.
 
@@ -1171,8 +1174,8 @@ that the network can reweight the most informative channels before global
 pooling.
 
 The output is a centered 19-joint skeleton using the lateral and vertical
-coordinates $(x,z)$ (according to the original paper, this is the best configuration, better than 
-the 3D representation), giving 38 regression targets per frame. We center the
+coordinates $(x,z)$, which the original paper reports as better than the
+3D representation, giving 38 regression targets per frame. We center the
 skeleton around the \texttt{SpineShoulder} joint so that the regressor focuses
 on body pose rather than absolute position in the radar field of view.
 The pose regressor follows the SK-DGCNN paper's shape-aware objective: a
@@ -1209,7 +1212,7 @@ In our two-axis setup, the total loss sums the active axes,
 $\mathcal{L}_{\mathrm{total}}=\sum_{c\in\mathcal{A}}\mathcal{L}_c$, where
 $\mathcal{A}$ grows from $z$ to $(z,x)$ during sequential multitask training.
 The architecture and training hyperparameters for this stage are summarized in
-Appendix Table~\ref{tab:appendix-skdgcnn}. This regression part is the hardest in the sequence
+Appendix Table~\ref{tab:appendix-skdgcnn}. This regression stage is the hardest in the sequence
 and requires very compute-intensive training (200 epochs).
 
 \begin{figure}[H]
@@ -1324,14 +1327,14 @@ RadHAR & 0.9294 & 0.8877 & 0.8879 \\
 \end{table}
 
 The downstream classifier performs well, but remains below the best direct
-PointNet variants on RadHAR and DGUHA. We are very far away from the results reported in the 
-SK-DGCNN paper, where the reported accuracy and F1 are 99.5\%. After asking the authors for the source code
-and having strong suspicions about the presence of data leakage, it seems that our fears were right.
-The original paper never uses the original testing dataset, but recreates one from the training
-dataset, making the task easier. Worse, the paper first processes the data with rolling windows
-before cutting it into training and testing sets, making windows in those sets overlap quite significantly.
-Our results might be more significant, and they show that this approach, as it is, 
-underperforms the other models, even if it seemed very promising.
+PointNet variants on RadHAR and DGUHA. These results are far below those reported in the
+SK-DGCNN paper, where the reported accuracy and F1 are 99.5\%. After requesting the authors'
+source code and investigating possible data leakage, we found that this concern was justified.
+The original paper does not use the official test dataset; instead, it recreates a test set from the
+training dataset, making the task easier. Moreover, the paper first processes the data with rolling windows
+before splitting it into training and testing sets, causing windows in those sets to overlap substantially.
+Our results are therefore more meaningful, and they show that this approach, in its current form,
+underperforms the other models, even though it seemed very promising.
 For the global comparison, we count the full two-stage pipeline: the
 skeleton regressor plus the $1{,}081{,}093$-parameter ST-GCN++ classifier.
 This gives $3{,}014{,}547$ parameters for the MARS-trained regressor pipeline
@@ -1378,7 +1381,7 @@ MLP baseline & 74.9 & 74.6 \\
 \bottomrule
 \end{tabular}
 }
-\caption{Performance of classical ML models on RadHAR, frame by frame.}
+\caption{Performance of classical ML models on RadHAR, frame-by-frame.}
 \label{tab:radhar-classical-results}
 \end{table}
 
@@ -1444,7 +1447,7 @@ statistical summaries for fine-grained gestures.
 
 MARS reveals the critical limitations of statistical approaches. Under a random
 split, XGBoost reaches $61.7\%$ accuracy, but the macro F1-score collapses to
-$23.8\%$, indicating a lazy-prediction trap.
+$23.8\%$, indicating a prediction-collapse trap.
 
 \begin{table}[H]
 \centering
@@ -1488,10 +1491,10 @@ blindness motivates advanced spatial architectures such as DGCNN.
 
 The progression is clear: coarse macro-motions such as RadHAR can be partly
 solved with statistical moments, fine-grained actions such as DGUHA require
-non-linear ensemble methods, and symmetrical cross-subject motions such as MARS
+non-linear ensemble methods, and symmetric cross-subject motions such as MARS
 demand local 3D structural modeling. These results confirm that architectural
 complexity is a functional requirement for robust human activity recognition,
-not merely an optimization.
+not merely an optimization detail.
 
 
 %==============================================================
@@ -1772,7 +1775,59 @@ MARS & Linear SVM & \missing & \missing & 0.3700 & 0.1450 \\
 %                        CONCLUSION
 %==============================================================
 \section{Conclusion}
-% Restate findings and next steps.
+
+This study benchmarked six families of architectures---statistical moments, classical ML
+baselines, a sketching Transformer, PointNet (V1 and V2), a pointwise attention pooling
+model, and a two-stage skeleton pipeline based on SK-DGCNN---on four mmWave radar
+point-cloud datasets covering 2 to 10 human activity classes.
+
+\paragraph{Temporal context is the single most important factor.}
+The moment-based MLP, which classifies one frame at a time, reaches only $58.6\%$ on
+RadHAR---a gap of nearly $38$ percentage points below PointNet V1.
+Activities such as squats and jumping jacks are spatially indistinguishable in a single
+frame; their periodicity only becomes apparent over a sequence of frames.
+This gap is the clearest quantitative argument for using sequence-aware architectures
+over frame-independent baselines.
+
+\paragraph{PointNet variants are the most robust choice across datasets.}
+PointNet V1 and V2 score highest or near-highest on all four datasets.
+V2 (with temporal attention via RoPE) consistently outperforms V1 when windows are long
+and motion dynamics are informative (RadHAR, DGUHA), but V1 is stronger in low-data
+regimes (MARS, RaDataTouille), where the extra attention parameters become a liability
+rather than an asset.
+The lightweight Pointwise Attention Pooling model achieves competitive results
+($95.2\%$ on RadHAR, $91.6\%$ on DGUHA) at a fraction of the parameter count, making
+it attractive for embedded or latency-sensitive deployments.
+
+\paragraph{The skeleton pipeline underperforms despite theoretical appeal.}
+The SK-DGCNN two-stage approach achieves $88.8\%$ on RadHAR and $87.4\%$ on DGUHA,
+trailing the best direct classifiers by $5$--$8$ pp.
+The main bottleneck is error propagation: mistakes in the radar-to-skeleton regression
+stage cannot be corrected by the downstream classifier, which sees only the predicted
+skeleton.
+We also found that the $99.5\%$ results claimed in the original SK-DGCNN paper result
+from data leakage---the published split overlaps training windows into the test set,
+making the evaluation substantially easier than a clean subject-isolated protocol.
+
+\paragraph{Architecture complexity must match the data regime.}
+Classical baselines (Random Forest, XGBoost) are competitive on simple tasks
+($72.9\%$--$73.9\%$ on RadHAR) and require no GPU training, but collapse under
+cross-subject evaluation on MARS (macro F1 $<24\%$).
+The Sketching Transformer reaches $96.4\%$ on RadHAR with a lightweight preprocessing
+pipeline, demonstrating that compact random-feature representations are a strong
+alternative to raw point-cloud processing when training data is ample.
+
+\paragraph{Limitations and future directions.}
+All four datasets suffer from small subject pools: RadHAR has only two subjects, MARS
+three, and our own RaDataTouille three.
+Accuracy numbers on these benchmarks measure in-distribution performance rather than
+true generalization, and near-ceiling scores on RadHAR should be read accordingly.
+Future work should prioritize collecting larger, subject-diverse recordings and
+evaluating under strict leave-one-subject-out protocols.
+On the modeling side, integrating temporal information into the moment baseline (e.g.\
+computing moments over a sliding window or feeding per-frame descriptors to an LSTM)
+and improving the skeleton regression stage with uncertainty-aware training are
+natural next steps that could close the remaining gaps.
 
 
 \appendix

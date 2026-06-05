@@ -349,268 +349,6 @@ Total & 39 & 40,083 \\
 \end{center}
 
 %==============================================================
-%                  SKETCHING
-%==============================================================
-\section{Sketching}
-\label{sec:sketching-transformer}
-\sectionauthor{Othmane Ouali}
-
-\subsection{Preprocessing: Random Fourier Feature sketching}
-\label{sec:preprocessing}
-
-\paragraph{Why preprocessing is needed.}
-A raw radar frame is an \emph{unordered set of points of variable
-cardinality}. No standard learning architecture --- be it an MLP, a CNN,
-a Transformer or a gradient-boosted tree --- can consume such an object
-directly: they all expect inputs of fixed shape and well-defined
-structure. A preprocessing step is therefore unavoidable. The original
-RadHAR baseline addresses this issue through \emph{voxelization}: each
-2-second window is discretized into a tensor of shape
-$60 \times 10 \times 32 \times 32 = 614\,400$ scalar
-features~\cite{singh2019radhar}. This representation is extremely
-high-dimensional and overwhelmingly sparse, since a typical frame
-contains only a few tens of points scattered in a grid of $10{,}240$
-voxels. The downstream model thus has to invest most of its capacity in
-processing empty space.
-
-We propose instead to compress each frame into a compact, fixed-size
-vector via a \emph{random Fourier feature map}, which preserves the
-information carried by the points while keeping the dimensionality
-manageable.
-
-\paragraph{Random Fourier feature sketching.}
-For a given choice of $d$ per-point features
-(see paragraph \emph{Feature selection} below), a frame at time $t$ is
-a point set $\mathcal{F}_t = \{p_1, \ldots, p_{N_t}\} \subset
-\mathbb{R}^d$, where $N_t$ varies from frame to frame. We map this set
-to a fixed-size sketch $s_t \in \mathbb{R}^m$ in two steps.
-
-\emph{Step 1 --- Per-point random projection.} We draw a single random
-matrix $W \in \mathbb{R}^{m \times d}$ with i.i.d.\ entries
-\[
-W_{ij} \;\sim\; \mathcal{N}(0, \sigma^2),
-\]
-\emph{once and for all} at the beginning of training, and freeze it.
-Each point $p_i$ is mapped to
-\[
-\varphi(p_i) \;=\; \sin(W p_i) \;\in\; \mathbb{R}^{m}.
-\]
-This is a Fourier-type random feature map (with bias $b = 0$ and using
-the sine component only), inspired by the random Fourier feature
-construction of Rahimi and Recht~\cite{rahimi2007random}. With
-$b = 0$ and a single trigonometric component, the inner product
-$\langle \varphi(p_i), \varphi(p_j)\rangle$ does not strictly
-approximate a Gaussian kernel; we use it nonetheless as a randomized,
-non-linear feature map, which proved sufficient for our task.
-
-\emph{Step 2 --- Aggregation across the frame.} Since
-$\mathcal{F}_t$ is a \emph{set}, the aggregation across its points must
-be permutation-invariant. We consider two variants:
-\begin{itemize}
-    \item \textbf{Uniform sketch:}
-    \(\displaystyle s_t \;=\; \frac{1}{N_t}\sum_{i=1}^{N_t} \sin(W p_i).\)
-    \item \textbf{Intensity-weighted sketch:}
-    \(\displaystyle s_t \;=\; \frac{1}{\sum_i I_i}\sum_{i=1}^{N_t} I_i\,\sin(W p_i),\)
-\end{itemize}
-where $I_i$ denotes the reflected intensity of point $i$. The
-intensity-weighted variant gives more importance to high-confidence
-reflections, which in our experiments proved beneficial.
-
-The whole window is then represented by a tensor of shape
-$60 \times m$, obtained by stacking the 60 per-frame sketches.
-
-\paragraph{Feature standardization.}
-Per-point features live on widely different scales: range is in metres
-($r \in [0, 10]$ approximately), bearing in radians
-($\theta \in [-\pi, \pi]$), velocity in m/s, intensity on an arbitrary
-scale. Because the random projection $W p_i$ mixes all features
-linearly, this scale heterogeneity would make the choice of $\sigma$
-ill-defined. We therefore standardize every feature to zero mean and
-unit variance \emph{before} applying the sketching step. The
-per-feature mean $\mu$ and standard deviation $s$ are computed
-\emph{on the training set only}, and the same statistics are reused at
-test time, so that no information leaks from the test set into the
-preprocessing pipeline.
-
-\paragraph{Feature selection.}
-The seven raw features per point ($x, y, z, r, v, \theta, I$) are
-redundant: $(x, y, z)$, $r$ and $\theta$ are linked by the
-spherical-to-Cartesian relation. Determining which subset is most
-informative is therefore an empirical question. We compared four
-configurations:
-
-\begin{center}
-\begin{tabular}{lll}
-\toprule
-Configuration       & Per-point features           & Aggregation \\
-\midrule
-All features        & $(x, y, z, r, v, \theta, I)$ & uniform \\
-Cartesian + I       & $(x, y, z, I)$               & uniform \\
-Polar + I           & $(\theta, r, I)$             & uniform \\
-Polar + I (weighted)& $(\theta, r, I)$             & $I$-weighted \\
-\bottomrule
-\end{tabular}
-\end{center}
-
-\noindent The polar configuration $(\theta, r, I)$ consistently
-outperformed the Cartesian variants, which motivated the introduction
-of the intensity-weighted sketch as a refinement of that
-configuration. A detailed comparison is reported in the ablation
-study (Section~\ref{sec:ablation}).
-
-\paragraph{Sliding-window construction.}
-Each raw recording is segmented into 2-second windows (60 consecutive
-frames) using a sliding window with a stride of $10$ frames. This
-yields a controlled overlap (50 frames, $\approx 83\%$) between
-consecutive windows: small enough to keep them distinct from the
-classifier's point of view, large enough to make full use of the
-available recordings. The procedure produces a total of $12\,150$
-training windows and $3\,565$ test windows, in line with the official
-RadHAR train/test split.
-
-\paragraph{Hyperparameter choices.}
-The preprocessing pipeline introduces several hyperparameters whose
-impact is non-trivial: the random-projection scale $\sigma$, the
-sketch dimension $m$, the sliding-window stride, the per-point
-feature subset, and the aggregation scheme (uniform vs.\
-intensity-weighted). All of them were studied empirically; the
-corresponding ablation study is reported in
-Section~\ref{sec:ablation}. Unless stated otherwise, the rest of the
-paper uses $\sigma = 1$, $m = 256$, polar features
-$(\theta, r, I)$, intensity-weighted aggregation, and a stride of
-$10$ frames.
-
-\paragraph{Summary.}
-The full preprocessing pipeline can be summarized as
-\[
-\begin{aligned}
-\text{recording} &\rightarrow \text{frames}
-\rightarrow \text{2-s windows} \\
-&\rightarrow \text{sketched windows}
-\rightarrow \text{model input.}
-\end{aligned}
-\]
-The data finally fed to all models compared in this paper is therefore
-a tensor of shape $(12\,150, 60, 256)$ for training and
-$(3\,565, 60, 256)$ for testing.
-
-
-\subsection{Transformer encoder}
-\label{sec:transformer}
-
-\paragraph{Overview.}
-The preprocessing stage turns each 2-second window into a sequence of
-$60$ sketches $s_1, \ldots, s_{60} \in \mathbb{R}^{m}$, one per frame.
-We treat this sequence as a sequence of $60$ tokens and process it with
-a Transformer encoder, which models temporal dependencies between frames
-through self-attention. We deliberately do not introduce an input projection
-layer: the sketches are fed directly to the encoder, so that the model
-dimension equals the sketch dimension, $d_{\text{model}} = m$. As a side
-effect, varying $m$ in the ablation study (Section~\ref{sec:ablation}) also
-varies the size of the Transformer.
-
-\paragraph{Positional encoding.}
-Self-attention is permutation-invariant: it would treat the $60$ frames as an
-unordered set and discard the temporal order that distinguishes activities such
-as walking from boxing. To restore the temporal order, we add a fixed
-sinusoidal positional encoding~\cite{vaswani2017attention} to each sketch before
-the first encoder layer:
-\[
-\tilde{s}_t = s_t + \mathrm{PE}(t), \qquad t = 1, \ldots, 60.
-\]
-For each position $t$ and each dimension $i = 0, \ldots, m-1$:
-\[
-\mathrm{PE}(t)_{2i} = \sin\!\left(\frac{t}{10000^{2i / m}}\right),
-\quad
-\mathrm{PE}(t)_{2i+1} = \cos\!\left(\frac{t}{10000^{2i / m}}\right).
-\]
-This encoding is computed once and kept fixed throughout training.
-
-\paragraph{Encoder block.}
-Each encoder layer follows the standard
-Transformer~\cite{vaswani2017attention} design: a multi-head self-attention
-sublayer followed by a position-wise feed-forward network, each wrapped in a
-residual connection and layer normalization (post-norm). The self-attention uses $h = 4$
-heads; the feed-forward sublayer has a single hidden layer of width $2m$ with
-a GELU activation. Dropout with rate $p = 0.4$ is applied inside each sublayer.
-We stack $L = 3$ such layers.
-
-\paragraph{Classification head.}
-After the encoder layers, we obtain a sequence of contextualized frame
-representations $h_1, \ldots, h_{60}$. We aggregate them by mean pooling over
-the temporal axis,
-\[
-\bar{h} = \frac{1}{60}\sum_{t=1}^{60} h_t \in \mathbb{R}^{m},
-\]
-and feed the result to a linear layer that outputs the activity logits. We use
-mean pooling rather than a dedicated \texttt{[CLS]} token because it gave
-comparable results without introducing an extra learned token.
-
-\paragraph{Hyperparameters.}
-The architecture is governed by four hyperparameters: the model dimension
-$m = 256$, the number of encoder layers $L = 3$, the number of attention heads
-$h = 4$, and the dropout rate $p = 0.4$.
-
-The full architecture is summarized in
-Figure~\ref{fig:transformer-architecture} (Appendix~\ref{app:architecture}).
-
-
-\subsection{Training protocol}
-\label{sec:training}
-
-\paragraph{Loss and optimization.}
-We minimize the cross-entropy loss between predicted logits and ground-truth
-activity labels. Optimization is performed with Adam at a fixed learning rate
-of $10^{-4}$, with no weight decay and no learning-rate schedule. We use a
-mini-batch size of $32$ and train for $30$ epochs, without early stopping.
-
-\paragraph{Weight initialization.}
-All trainable weight matrices in the Transformer encoder and final
-classification head are initialized with Kaiming initialization; biases are
-initialized to zero. The random-projection matrix $W$ of the sketching step is
-not trained: it is drawn once from $\mathcal{N}(0, \sigma^2)$ at the start of
-training and kept fixed.
-
-\paragraph{Evaluation protocol.}
-We use the official RadHAR train/test split ($12\,150$ training windows and
-$3\,565$ test windows) without carving out a separate validation set. The final
-test accuracy reported in the main comparison corresponds to the model state at
-the last training epoch.
-
-\paragraph{Training dynamics.}
-The training loss decreases smoothly toward zero, while the test loss decreases
-overall but exhibits large epoch-to-epoch variance. This pattern is not a
-typical sign of overfitting, where the test loss would increase monotonically;
-we attribute it primarily to a distributional gap between the training and test
-splits of RadHAR.
-
-\begin{figure}[H]
-    \centering
-    \IfFileExists{loss.png}{%
-        \includegraphics[width=\columnwidth]{loss.png}%
-    }{%
-        \fbox{\parbox{0.9\columnwidth}{\centering Missing local file:
-        \texttt{loss.png}}}%
-    }
-    \caption{Training and test cross-entropy loss across the 30 epochs. The
-    training loss converges smoothly toward zero, while the test loss exhibits
-    large epoch-to-epoch variance, attributable to the distributional gap between
-    the train and test splits of RadHAR.}
-    \label{fig:training-curves}
-\end{figure}
-
-
-\subsection{Ablation studies}
-\label{sec:ablation}
-% À venir
-
-
-
-
-
-
-
-%==============================================================
 %                          POINTNET
 %==============================================================
 \section{PointNet}
@@ -885,6 +623,268 @@ classes in the subject-isolated test set. This gap suggests that MARS is not
 only an optimization problem, but also a generalization problem: the models fit
 the training subjects well, yet struggle when the same rehabilitation gestures
 are performed by an unseen subject.
+
+
+
+
+
+
+%==============================================================
+%                  SKETCHING
+%==============================================================
+\section{Sketching}
+\label{sec:sketching-transformer}
+\sectionauthor{Othmane Ouali}
+
+\subsection{Preprocessing: Random Fourier Feature sketching}
+\label{sec:preprocessing}
+
+\paragraph{Why preprocessing is needed.}
+A raw radar frame is an \emph{unordered set of points of variable
+cardinality}. No standard learning architecture --- be it an MLP, a CNN,
+a Transformer or a gradient-boosted tree --- can consume such an object
+directly: they all expect inputs of fixed shape and well-defined
+structure. A preprocessing step is therefore unavoidable. The original
+RadHAR baseline addresses this issue through \emph{voxelization}: each
+2-second window is discretized into a tensor of shape
+$60 \times 10 \times 32 \times 32 = 614\,400$ scalar
+features~\cite{singh2019radhar}. This representation is extremely
+high-dimensional and overwhelmingly sparse, since a typical frame
+contains only a few tens of points scattered in a grid of $10{,}240$
+voxels. The downstream model thus has to invest most of its capacity in
+processing empty space.
+
+We propose instead to compress each frame into a compact, fixed-size
+vector via a \emph{random Fourier feature map}, which preserves the
+information carried by the points while keeping the dimensionality
+manageable.
+
+\paragraph{Random Fourier feature sketching.}
+For a given choice of $d$ per-point features
+(see paragraph \emph{Feature selection} below), a frame at time $t$ is
+a point set $\mathcal{F}_t = \{p_1, \ldots, p_{N_t}\} \subset
+\mathbb{R}^d$, where $N_t$ varies from frame to frame. We map this set
+to a fixed-size sketch $s_t \in \mathbb{R}^m$ in two steps.
+
+\emph{Step 1 --- Per-point random projection.} We draw a single random
+matrix $W \in \mathbb{R}^{m \times d}$ with i.i.d.\ entries
+\[
+W_{ij} \;\sim\; \mathcal{N}(0, \sigma^2),
+\]
+\emph{once and for all} at the beginning of training, and freeze it.
+Each point $p_i$ is mapped to
+\[
+\varphi(p_i) \;=\; \sin(W p_i) \;\in\; \mathbb{R}^{m}.
+\]
+This is a Fourier-type random feature map (with bias $b = 0$ and using
+the sine component only), inspired by the random Fourier feature
+construction of Rahimi and Recht~\cite{rahimi2007random}. With
+$b = 0$ and a single trigonometric component, the inner product
+$\langle \varphi(p_i), \varphi(p_j)\rangle$ does not strictly
+approximate a Gaussian kernel; we use it nonetheless as a randomized,
+non-linear feature map, which proved sufficient for our task.
+
+\emph{Step 2 --- Aggregation across the frame.} Since
+$\mathcal{F}_t$ is a \emph{set}, the aggregation across its points must
+be permutation-invariant. We consider two variants:
+\begin{itemize}
+    \item \textbf{Uniform sketch:}
+    \(\displaystyle s_t \;=\; \frac{1}{N_t}\sum_{i=1}^{N_t} \sin(W p_i).\)
+    \item \textbf{Intensity-weighted sketch:}
+    \(\displaystyle s_t \;=\; \frac{1}{\sum_i I_i}\sum_{i=1}^{N_t} I_i\,\sin(W p_i),\)
+\end{itemize}
+where $I_i$ denotes the reflected intensity of point $i$. The
+intensity-weighted variant gives more importance to high-confidence
+reflections, which in our experiments proved beneficial.
+
+The whole window is then represented by a tensor of shape
+$60 \times m$, obtained by stacking the 60 per-frame sketches.
+
+\paragraph{Feature standardization.}
+Per-point features live on widely different scales: range is in metres
+($r \in [0, 10]$ approximately), bearing in radians
+($\theta \in [-\pi, \pi]$), velocity in m/s, intensity on an arbitrary
+scale. Because the random projection $W p_i$ mixes all features
+linearly, this scale heterogeneity would make the choice of $\sigma$
+ill-defined. We therefore standardize every feature to zero mean and
+unit variance \emph{before} applying the sketching step. The
+per-feature mean $\mu$ and standard deviation $s$ are computed
+\emph{on the training set only}, and the same statistics are reused at
+test time, so that no information leaks from the test set into the
+preprocessing pipeline.
+
+\paragraph{Feature selection.}
+The seven raw features per point ($x, y, z, r, v, \theta, I$) are
+redundant: $(x, y, z)$, $r$ and $\theta$ are linked by the
+spherical-to-Cartesian relation. Determining which subset is most
+informative is therefore an empirical question. We compared four
+configurations:
+
+\begin{center}
+\begin{tabular}{lll}
+\toprule
+Configuration       & Per-point features           & Aggregation \\
+\midrule
+All features        & $(x, y, z, r, v, \theta, I)$ & uniform \\
+Cartesian + I       & $(x, y, z, I)$               & uniform \\
+Polar + I           & $(\theta, r, I)$             & uniform \\
+Polar + I (weighted)& $(\theta, r, I)$             & $I$-weighted \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent The polar configuration $(\theta, r, I)$ consistently
+outperformed the Cartesian variants, which motivated the introduction
+of the intensity-weighted sketch as a refinement of that
+configuration. A detailed comparison is reported in the ablation
+study (Section~\ref{sec:ablation}).
+
+\paragraph{Sliding-window construction.}
+Each raw recording is segmented into 2-second windows (60 consecutive
+frames) using a sliding window with a stride of $10$ frames. This
+yields a controlled overlap (50 frames, $\approx 83\%$) between
+consecutive windows: small enough to keep them distinct from the
+classifier's point of view, large enough to make full use of the
+available recordings. The procedure produces a total of $12\,150$
+training windows and $3\,565$ test windows, in line with the official
+RadHAR train/test split.
+
+\paragraph{Hyperparameter choices.}
+The preprocessing pipeline introduces several hyperparameters whose
+impact is non-trivial: the random-projection scale $\sigma$, the
+sketch dimension $m$, the sliding-window stride, the per-point
+feature subset, and the aggregation scheme (uniform vs.\
+intensity-weighted). All of them were studied empirically; the
+corresponding ablation study is reported in
+Section~\ref{sec:ablation}. Unless stated otherwise, the rest of the
+paper uses $\sigma = 1$, $m = 256$, polar features
+$(\theta, r, I)$, intensity-weighted aggregation, and a stride of
+$10$ frames.
+
+\paragraph{Summary.}
+The full preprocessing pipeline can be summarized as
+\[
+\begin{aligned}
+\text{recording} &\rightarrow \text{frames}
+\rightarrow \text{2-s windows} \\
+&\rightarrow \text{sketched windows}
+\rightarrow \text{model input.}
+\end{aligned}
+\]
+The data finally fed to all models compared in this paper is therefore
+a tensor of shape $(12\,150, 60, 256)$ for training and
+$(3\,565, 60, 256)$ for testing.
+
+
+\subsection{Transformer encoder}
+\label{sec:transformer}
+
+\paragraph{Overview.}
+The preprocessing stage turns each 2-second window into a sequence of
+$60$ sketches $s_1, \ldots, s_{60} \in \mathbb{R}^{m}$, one per frame.
+We treat this sequence as a sequence of $60$ tokens and process it with
+a Transformer encoder, which models temporal dependencies between frames
+through self-attention. We deliberately do not introduce an input projection
+layer: the sketches are fed directly to the encoder, so that the model
+dimension equals the sketch dimension, $d_{\text{model}} = m$. As a side
+effect, varying $m$ in the ablation study (Section~\ref{sec:ablation}) also
+varies the size of the Transformer.
+
+\paragraph{Positional encoding.}
+Self-attention is permutation-invariant: it would treat the $60$ frames as an
+unordered set and discard the temporal order that distinguishes activities such
+as walking from boxing. To restore the temporal order, we add a fixed
+sinusoidal positional encoding~\cite{vaswani2017attention} to each sketch before
+the first encoder layer:
+\[
+\tilde{s}_t = s_t + \mathrm{PE}(t), \qquad t = 1, \ldots, 60.
+\]
+For each position $t$ and each dimension $i = 0, \ldots, m-1$:
+\[
+\mathrm{PE}(t)_{2i} = \sin\!\left(\frac{t}{10000^{2i / m}}\right),
+\quad
+\mathrm{PE}(t)_{2i+1} = \cos\!\left(\frac{t}{10000^{2i / m}}\right).
+\]
+This encoding is computed once and kept fixed throughout training.
+
+\paragraph{Encoder block.}
+Each encoder layer follows the standard
+Transformer~\cite{vaswani2017attention} design: a multi-head self-attention
+sublayer followed by a position-wise feed-forward network, each wrapped in a
+residual connection and layer normalization (post-norm). The self-attention uses $h = 4$
+heads; the feed-forward sublayer has a single hidden layer of width $2m$ with
+a GELU activation. Dropout with rate $p = 0.4$ is applied inside each sublayer.
+We stack $L = 3$ such layers.
+
+\paragraph{Classification head.}
+After the encoder layers, we obtain a sequence of contextualized frame
+representations $h_1, \ldots, h_{60}$. We aggregate them by mean pooling over
+the temporal axis,
+\[
+\bar{h} = \frac{1}{60}\sum_{t=1}^{60} h_t \in \mathbb{R}^{m},
+\]
+and feed the result to a linear layer that outputs the activity logits. We use
+mean pooling rather than a dedicated \texttt{[CLS]} token because it gave
+comparable results without introducing an extra learned token.
+
+\paragraph{Hyperparameters.}
+The architecture is governed by four hyperparameters: the model dimension
+$m = 256$, the number of encoder layers $L = 3$, the number of attention heads
+$h = 4$, and the dropout rate $p = 0.4$.
+
+The full architecture is summarized in
+Figure~\ref{fig:transformer-architecture} (Appendix~\ref{app:architecture}).
+
+
+\subsection{Training protocol}
+\label{sec:training}
+
+\paragraph{Loss and optimization.}
+We minimize the cross-entropy loss between predicted logits and ground-truth
+activity labels. Optimization is performed with Adam at a fixed learning rate
+of $10^{-4}$, with no weight decay and no learning-rate schedule. We use a
+mini-batch size of $32$ and train for $30$ epochs, without early stopping.
+
+\paragraph{Weight initialization.}
+All trainable weight matrices in the Transformer encoder and final
+classification head are initialized with Kaiming initialization; biases are
+initialized to zero. The random-projection matrix $W$ of the sketching step is
+not trained: it is drawn once from $\mathcal{N}(0, \sigma^2)$ at the start of
+training and kept fixed.
+
+\paragraph{Evaluation protocol.}
+We use the official RadHAR train/test split ($12\,150$ training windows and
+$3\,565$ test windows) without carving out a separate validation set. The final
+test accuracy reported in the main comparison corresponds to the model state at
+the last training epoch.
+
+\paragraph{Training dynamics.}
+The training loss decreases smoothly toward zero, while the test loss decreases
+overall but exhibits large epoch-to-epoch variance. This pattern is not a
+typical sign of overfitting, where the test loss would increase monotonically;
+we attribute it primarily to a distributional gap between the training and test
+splits of RadHAR.
+
+\begin{figure}[H]
+    \centering
+    \IfFileExists{loss.png}{%
+        \includegraphics[width=\columnwidth]{loss.png}%
+    }{%
+        \fbox{\parbox{0.9\columnwidth}{\centering Missing local file:
+        \texttt{loss.png}}}%
+    }
+    \caption{Training and test cross-entropy loss across the 30 epochs. The
+    training loss converges smoothly toward zero, while the test loss exhibits
+    large epoch-to-epoch variance, attributable to the distributional gap between
+    the train and test splits of RadHAR.}
+    \label{fig:training-curves}
+\end{figure}
+
+
+\subsection{Ablation studies}
+\label{sec:ablation}
+% À venir
+
 
 
 

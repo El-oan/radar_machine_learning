@@ -652,6 +652,12 @@ a reflection, keeping lengths, angles, and volumes unchanged;
 without this constraint, the high-dimensional feature T-Net would 
 overfit to arbitrary linear maps, while we only want the T-Net to stick to
 reorienting the distribution to specialize the layer to this role.
+An orthogonal matrix $A$, verifies
+\[
+A A^\top = I,
+\]
+and implemented in the loss as a deviation from the identity matrix,
+$\lVert I - A A^\top\rVert_F^2$.
 
 \begin{figure}[H]
     \centering
@@ -744,6 +750,18 @@ sensor noise and single-frame detection instability.
 Here are the final accuracies and F1 scores obtained on each of the four datasets. We used five different
 initializations with five seeds to make the results reproducible. We observe that the initialization
 has a strong impact on the scores.
+For all classification results, accuracy is the percentage of test windows that
+are classified correctly.
+
+Macro F1 gives equal weight to each class by averaging class-wise F1:
+\[
+\mathrm{F1} = \frac{1}{C}\sum_{c=1}^{C}
+\frac{2\,\mathrm{Precision}_c\,\mathrm{Recall}_c}
+{\mathrm{Precision}_c+\mathrm{Recall}_c}.
+\]
+F1 is better when the datatsets are umbalanced, whihc is not the case for our datatsets.
+ We still compute as it provides some information when one of the class is not well classified
+ compared to the others.
 
 \begin{table}[H]
 \centering
@@ -1064,6 +1082,39 @@ coordinates $(x,z)$ (according to the original paper, this is the best configura
 the 3D representation), giving 38 regression targets per frame. We center the
 skeleton around the \texttt{SpineShoulder} joint so that the regressor focuses
 on body pose rather than absolute position in the radar field of view.
+The pose regressor follows the SK-DGCNN paper's shape-aware objective: a
+coordinate-wise MSE term keeps individual joints close to their Kinect target,
+while a KL-divergence term treats the predicted and target skeleton coordinates
+as spatial distributions and penalizes global shape mismatch. For one active
+axis $c \in \{x,z\}$ with predicted coordinates $\hat{s}_{i,c}$ and target
+coordinates $s_{i,c}$ over $J=19$ joints,
+\[
+\mathcal{L}_{\mathrm{MSE},c}
+= \frac{1}{J}\sum_{i=1}^{J}(\hat{s}_{i,c}-s_{i,c})^2,
+\]
+\[
+\begin{aligned}
+\mathcal{L}_{\mathrm{KL},c}
+&= \sum_{i=1}^{J} q_{i,c}\log\frac{q_{i,c}}{p_{i,c}},\\
+p_c &= \mathrm{softmax}(\hat{s}_{:,c}),\\
+q_c &= \mathrm{softmax}(s_{:,c}).
+\end{aligned}
+\]
+The mixed loss is
+\[
+\mathcal{L}_{c}
+= \alpha_{\mathrm{MSE}}\mathcal{L}_{\mathrm{MSE},c}
++ \alpha_{\mathrm{KL}}\mathcal{L}_{\mathrm{KL},c},
+\]
+with dynamic weights
+\[
+\alpha_{\mathrm{KL}} = 0.05\left\lfloor\frac{\mathrm{epoch}}{20}\right\rfloor,
+\qquad
+\alpha_{\mathrm{MSE}} = 1-\alpha_{\mathrm{KL}}.
+\]
+In our two-axis setup, the total loss sums the active axes,
+$\mathcal{L}_{\mathrm{total}}=\sum_{c\in\mathcal{A}}\mathcal{L}_c$, where
+$\mathcal{A}$ grows from $z$ to $(z,x)$ during sequential multitask training.
 The architecture and training hyperparameters for this stage are summarized in
 Appendix Table~\ref{tab:appendix-skdgcnn}. This regression part is the hardest in the sequence
 and requires very compute-intensive training (200 epochs).
@@ -1135,6 +1186,15 @@ regressor on MARS, then as a full skeleton-based activity classifier on the resp
 Central torso joints are reconstructed most accurately, while wrists and
 feet have larger errors because they move farther from the body center and are
 harder to infer from sparse radar reflections. 
+For the skeleton regressor, mean absolute error is computed over the two
+predicted coordinates $(z,x)$:
+\[
+\mathrm{MAE}
+= \frac{1}{2NJ}
+\sum_{n=1}^{N}\sum_{i=1}^{J}\sum_{c\in\{z,x\}}
+\left|\hat{s}^{(n)}_{i,c}-s^{(n)}_{i,c}\right|,
+\]
+where $N$ is the number of frames and $J=19$ is the number of joints.
 
 \begin{table}[H]
 \centering
@@ -1162,15 +1222,16 @@ Worst joint & \texttt{WristRight} MAE & 9.7054 cm \\
 \toprule
 Dataset & Validation acc. & Test acc. & Test macro F1 \\
 \midrule
+DGUHA & 0.9013 & 0.8738 & 0.8741 \\
 RadHAR & 0.9294 & 0.8877 & 0.8879 \\
 \bottomrule
 \end{tabular}
-\caption{Skeleton-based ST-GCN++ classification on predicted RadHAR skeletons.}
+\caption{Skeleton-based ST-GCN++ classification on predicted skeletons.}
 \label{tab:skdgcnn-classification-results}
 \end{table}
 
 The downstream classifier performs well, but remains below the best direct
-PointNet variants on RadHAR. We are very far away from the results reported in the 
+PointNet variants on RadHAR and DGUHA. We are very far away from the results reported in the 
 SK-DGCNN paper, where the reported accuracy and F1 are 99.5\%. After asking the authors for the source code
 and having strong suspicions about the presence of data leakage, it seems that our fears were right.
 The original paper never uses the original testing dataset, but recreates one from the training
@@ -1344,6 +1405,7 @@ not merely an optimization.
 %==============================================================
 \section{Moments}
 \label{sec:moments}
+\sectionauthor{Meriem Mellouki and Zaineb Tarhda}
 
 \subsection{Motivation}
 
@@ -1588,7 +1650,7 @@ DGUHA & Linear SVM & \missing & \missing & 0.5960 & 0.5800 \\
  & Random Forest & \missing & \missing & 0.7140 & 0.6990 \\
  & PointNet V1 & 3,341,008 & 40 & 0.9193 & 0.9205 \\
  & PointNet V2 & 3,357,428 & 40 & 0.9279 & 0.9274 \\
- & SK-DGCNN & 1,935,886 & \missing & \missing & \missing \\
+ & SK-DGCNN & 1,935,886 & \missing & 0.8238 & 0.8232 \\
  & Moments MLP & \missing & \missing & \missing & \missing \\
  & Sketching Transformer & \missing & \missing & \missing & \missing \\
 \midrule

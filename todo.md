@@ -345,3 +345,19 @@ Validation accuracy: 1.0000
 Test macro F1: 0.9675
 Test accuracy: 0.9671
 {'boxing': 0.9961089491844177, 'jack': 0.9790794849395752, 'jump': 0.9291338324546814, 'squats': 0.9750000238418579, 'walk': 0.9580419659614563}
+
+
+# skdgcnn + stgcn++
+DGUHA
+Best validation checkpoint: checkpoint_144.pt
+Validation accuracy: 0.8113
+Test macro F1: 0.8232
+Test accuracy: 0.8238
+{'running': 0.8458972573280334, 'jumping': 0.7934426069259644, 'sitting_down_and_standing_up': 0.8638613820075989, 'both_upper_limb_extension': 0.7028753757476807, 'falling_forward': 0.9412456154823303, 'right_limb_extension': 0.8603491187095642, 'left_limb_extension': 0.7549744248390198}
+
+RadHAR
+Best validation checkpoint: checkpoint_97.pt
+Validation accuracy: 0.9294
+Test macro F1: 0.8879
+Test accuracy: 0.8877
+{'boxing': 0.9496688842773438, 'jack': 0.8988439440727234, 'jump': 0.8291009068489075, 'squats': 0.8902953863143921, 'walk': 0.8715542554855347}

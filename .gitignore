@@ -22,6 +22,6 @@ datasets/SKradHAR/Train
 datasets/SKDGUHA/Train
 datasets/SKDGUHA/Test
 
-
 # Checkpoints
 checkpoints/*/*.pt
+checkpoints/*/*/*.pt

@@ -22,8 +22,6 @@ datasets/SKradHAR/Train
 datasets/SKDGUHA/Train
 datasets/SKDGUHA/Test
 
-# Results
-results/modelNET/*
 
 # Checkpoints
 checkpoints/*/*.pt

@@ -1,11 +1,11 @@
 # Notebook Rules
 
-Use these rules for Jupyter notebooks in this project:
+Use these rules for Jupyter notebooks:
 
-1. The first cell must contain all imports used in the notebook (or the cell after the initila notebook description).
-2. Write one function per cell.
-3. Keep code minimal: as short and simple as possible.
-4. Do not add generality.
-5. Do not add guardrails for edge cases.
-6. Every function must include a proper definition.
-7. never remove the prints, meant for verifying functions.
+- The first cell must contain all imports used in the notebook (or the cell after the initial notebook description).
+- Never stop a notebook run. If you need a kernel or a process, find another way, but under no circumstances pause or stop a notebook running. 
+- Write one and only one function per cell.
+- Keep code minimal: as short and simple as possible.
+- Do not add generality or guardrails for edge cases.
+- Every function must include a proper definition.
+- Never remove the prints, meant for verifying functions.
